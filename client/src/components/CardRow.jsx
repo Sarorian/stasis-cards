@@ -1,0 +1,115 @@
+import { useState } from 'react';
+import { api } from '../api.js';
+import { money, pct, tone, fmtDate, fmtTime, roiPct, checkLinks } from '../format.js';
+import CardImage from './CardImage.jsx';
+import SellForm from './SellForm.jsx';
+
+export default function CardRow({ card, onChange }) {
+  const [mode, setMode] = useState(null); // 'sell' | 'price' | null
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [priceInput, setPriceInput] = useState('');
+
+  const sold = card.status === 'sold';
+  const graded = card.graded?.company;
+  const market = card.market?.price || 0;
+  const value = sold ? card.sale.price - (card.sale.fees || 0) : market;
+  const roi = roiPct(card.cost, value);
+
+  async function act(fn, confirmText) {
+    if (confirmText && !window.confirm(confirmText)) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const res = await fn();
+      if (res?.result && !res.result.price) setMsg(res.result.errors?.[0] || 'No price found for this card.');
+      onChange?.();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function savePrice(e) {
+    e.preventDefault();
+    if (!(Number(priceInput) > 0)) return setMsg('Enter a price above 0.');
+    await act(() => api.updateCard(card._id, { marketPrice: Number(priceInput) }));
+    setMode(null);
+  }
+
+  const sources = card.market?.sources || [];
+
+  return (
+    <>
+      <div className="inv-row">
+        <CardImage src={card.imageUrl} game={card.game} alt={card.name} />
+        <div style={{ minWidth: 0 }}>
+          <div className="card-name">{card.name}</div>
+          <div className="hint">
+            {[card.number, card.setName, card.game].filter(Boolean).join(' · ')}{' '}
+            <span className={`pill${graded ? ' graded' : ''}`}>{graded ? `${card.graded.company} ${card.graded.grade}` : card.condition}</span>
+          </div>
+          <div className="sources">
+            {sources.map((s) =>
+              s.url ? <a key={s.source} href={s.url} target="_blank" rel="noreferrer">{s.source} {money(s.price)}</a> : <span key={s.source}>{s.source} {money(s.price)}</span>
+            )}
+            {checkLinks(card).map(([label, url]) => (
+              <a key={label} href={url} target="_blank" rel="noreferrer">{label} ↗</a>
+            ))}
+          </div>
+        </div>
+        <div className="col-hide">
+          {money(card.cost)}
+          <div className="faint">{fmtDate(card.boughtDate)} · {card.pctOfMarket}% of mkt</div>
+        </div>
+        <div className="col-hide">
+          {sold ? (
+            <>
+              {money(card.sale.price)}
+              <div className="faint">sold {fmtDate(card.sale.date)} · {card.sale.method}</div>
+            </>
+          ) : (
+            <>
+              {money(market)}
+              <div className="faint">{card.market?.manualOverride ? 'manual price' : sources[0]?.source === 'At purchase' ? 'price at purchase' : `updated ${fmtTime(card.market?.updatedAt)}`}</div>
+            </>
+          )}
+        </div>
+        <div>
+          <span className={`pill ${tone(roi)}`}>{pct(roi)}</span>
+          <div className={`faint ${tone(value - card.cost)}`}>{money(value - card.cost)}</div>
+        </div>
+        <div className="row-actions">
+          {sold ? (
+            <button className="small" disabled={busy} onClick={() => act(() => api.unsellCard(card._id), `Undo the sale of ${card.name}? The money comes back out of ${card.sale.method}.`)}>Undo sale</button>
+          ) : (
+            <>
+              <button className="small primary" onClick={() => setMode(mode === 'sell' ? null : 'sell')}>Sell</button>
+              <button className="small ghost" title="Refresh this card's price and image" disabled={busy} onClick={() => act(() => api.refreshCard(card._id))}>{busy ? '…' : '↻'}</button>
+              <button className="small ghost" title="Set price manually" onClick={() => { setPriceInput(market || ''); setMode(mode === 'price' ? null : 'price'); }}>$</button>
+            </>
+          )}
+          <button className="small ghost danger" title="Delete card" disabled={busy}
+            onClick={() => act(() => api.deleteCard(card._id), `Delete ${card.name}? This removes it from inventory${sold ? ' and removes its sale money' : ''}. The purchase payment stays recorded.`)}>✕</button>
+        </div>
+        {msg && <div className="error" style={{ gridColumn: '1 / -1', marginTop: 0 }}>{msg}</div>}
+        {mode === 'sell' && <SellForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
+        {mode === 'price' && (
+          <form className="inline-form" onSubmit={savePrice}>
+            <div className="form-row" style={{ gridTemplateColumns: '1fr auto auto auto' }}>
+              <label className="field">Market price (overrides auto updates)
+                <input type="number" min="0" step="0.01" autoFocus value={priceInput} onChange={(e) => setPriceInput(e.target.value)} />
+              </label>
+              <button className="primary">Save</button>
+              {card.market?.manualOverride && (
+                <button type="button" onClick={() => act(() => api.updateCard(card._id, { marketPrice: null })).then(() => setMode(null))}>Back to auto</button>
+              )}
+              <button type="button" onClick={() => setMode(null)}>Cancel</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </>
+  );
+}
