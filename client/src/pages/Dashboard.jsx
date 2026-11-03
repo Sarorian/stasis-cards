@@ -7,6 +7,7 @@ import PriceUpdateButton from '../components/PriceUpdateButton.jsx';
 import MonthlyChart from '../components/MonthlyChart.jsx';
 import WalletsPanel from '../components/WalletsPanel.jsx';
 import GamePerformance from '../components/GamePerformance.jsx';
+import { YearOneFigures } from './Setup.jsx';
 import { GAMES } from '../format.js';
 
 export default function Dashboard() {
@@ -25,7 +26,12 @@ export default function Dashboard() {
   return (
     <>
       <div className="page-head">
-        <h1>Dashboard</h1>
+        <div>
+          <h1>Dashboard</h1>
+          {s.startDate
+            ? <span className="hint">Tracking since {fmtDate(s.startDate)}{s.openingCards ? ` · ${s.openingCards} starting-inventory cards` : ''}</span>
+            : <Link to="/setup" className="hint">Moving from the old system? Do the starting setup</Link>}
+        </div>
         <PriceUpdateButton lastUpdated={s.pricesUpdatedAt} onDone={load} />
       </div>
 
@@ -97,6 +103,29 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {s.yearOne && (
+        <div className="panel year-one">
+          <div className="panel-head">
+            <h2>{s.yearOne.label}</h2>
+            <span className="hint">kept separate · not part of the numbers above</span>
+          </div>
+          <YearOneFigures y={s.yearOne} />
+          <div className="grid two-col" style={{ marginTop: 14 }}>
+            <div>
+              <div className="panel-head"><h3>Card profit by game</h3></div>
+              {s.yearOne.byGame.map((g) => (
+                <div className="list-row" key={g.game}><span>{g.game} <span className="faint">· {g.sold} sold · {money(g.revenue)}</span></span><span className={tone(g.profit)}>{money(g.profit)}</span></div>
+              ))}
+            </div>
+            <div>
+              <div className="panel-head"><h3>Net by month</h3><span className="hint">cards, binder, sealed, expenses</span></div>
+              <MonthlyChart months={s.yearOne.monthly.map((m) => ({ ...m, count: 1, revenue: 0 }))} />
+            </div>
+          </div>
+          <div className="faint" style={{ marginTop: 8 }}>{s.yearOne.note}</div>
+        </div>
+      )}
     </>
   );
 }

@@ -9,6 +9,7 @@ import Admin from './pages/Admin.jsx';
 import Trade from './pages/Trade.jsx';
 import Misc from './pages/Misc.jsx';
 import Debt from './pages/Debt.jsx';
+import Setup from './pages/Setup.jsx';
 
 export default function App() {
   const [authed, setAuthed] = useState(Boolean(getToken()));
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/trade" element={<Trade />} />
           <Route path="/misc" element={<Misc />} />
           <Route path="/debt" element={<Debt />} />
+          <Route path="/setup" element={<Setup />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

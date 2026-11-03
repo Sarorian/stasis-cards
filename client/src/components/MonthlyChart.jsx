@@ -7,11 +7,14 @@ export default function MonthlyChart({ months: raw, category = 'All' }) {
   const first = all.findIndex((m) => m.count > 0);
   const months = all.slice(Math.min(first === -1 ? all.length : first, all.length - 6));
   const max = Math.max(1, ...months.map((m) => Math.abs(m.profit)));
+  // Add the year to labels when the chart spans more than one year ("Jun '25" vs "Jun '26")
+  const multiYear = new Set(months.map((m) => m.month.slice(0, 4))).size > 1;
   return (
     <div>
       {months.map((m) => (
-        <div className="bar-row" key={m.month} title={`${m.count} sale(s), revenue ${money(m.revenue)}`}>
-          <span className="hint">{fmtMonth(m.month)}</span>
+        <div className="bar-row" key={m.month} title={`${m.count} sale(s), revenue ${money(m.revenue)}`}
+          style={multiYear ? { gridTemplateColumns: '58px 1fr 84px' } : undefined}>
+          <span className="hint">{fmtMonth(m.month)}{multiYear && ` '${m.month.slice(2, 4)}`}</span>
           <div className="bar-track">
             <div className={`bar ${m.profit >= 0 ? 'pos' : 'neg'}`} style={{ width: `${(Math.abs(m.profit) / max) * 100}%` }} />
           </div>

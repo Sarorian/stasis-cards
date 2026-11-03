@@ -10,7 +10,8 @@ const binderEntrySchema = new mongoose.Schema(
     count: { type: Number, required: true, min: 1 },
     amount: { type: Number, required: true, min: 0 },
     // 'Trade' = binder cards traded in or out; no wallet moved
-    method: { type: String, enum: [...WALLETS, 'Trade'], required: true },
+    // 'Trade' = binder cards traded in or out, 'Opening' = already owned on the start date; no wallet moved
+    method: { type: String, enum: [...WALLETS, 'Trade', 'Opening'], required: true },
     trade: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
     // For sells: cost basis removed from the pool
     costBasis: { type: Number, default: 0 },

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { WALLETS, money, fmtDate } from '../format.js';
 
@@ -23,7 +24,7 @@ export default function Admin() {
 
   return (
     <>
-      <div className="page-head"><h1>Admin</h1></div>
+      <div className="page-head"><h1>Admin</h1><Link to="/setup" className="btn">Starting setup (old system, starting inventory)</Link></div>
       <CapitalForm data={data} onSaved={load} />
       <WalletForm data={data} onSaved={load} />
 

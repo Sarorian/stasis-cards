@@ -135,7 +135,7 @@ r.get('/', ah(async (req, res) => {
     const spent = sum(all, (c) => c.cost);
     const days = soldCards.map((c) => daysBetween(c.boughtDate, c.sale.date));
     const flips = [...gs].sort((a, b) => b.profit - a.profit);
-    const pctPaid = all.filter((c) => c.pctOfMarket > 0);
+    const pctPaid = all.filter((c) => c.pctOfMarket > 0 && !c.opening);
     return {
       game: g,
       cardsEver: all.length,
@@ -241,6 +241,9 @@ r.get('/', ah(async (req, res) => {
 
   res.json({
     startingCapital: capital,
+    startDate: settings.startDate,
+    yearOne: settings.yearOne,
+    openingCards: inStock.filter((c) => c.opening).length,
     // ROI = what we've made (realized + unrealized) vs everything we've spent on cards and binder lots
     roiPct: pct(profit + inventoryMarket - inventoryCost, totalSpent),
     totalSpent,
@@ -270,9 +273,11 @@ r.get('/', ah(async (req, res) => {
     binder: pool,
     soldCount: sales.length,
     avgDaysToSell: holdDays.length ? Math.round(holdDays.reduce((a, b) => a + b, 0) / holdDays.length) : null,
-    avgPctOfMarketPaid: inStock.length
-      ? Math.round((inStock.reduce((a, c) => a + (c.pctOfMarket || 0), 0) / inStock.length) * 10) / 10
-      : null,
+    // Starting inventory has guessed or unknown market-at-purchase, so it's left out
+    avgPctOfMarketPaid: (() => {
+      const list = inStock.filter((c) => c.pctOfMarket > 0 && !c.opening);
+      return list.length ? Math.round((list.reduce((a, c) => a + c.pctOfMarket, 0) / list.length) * 10) / 10 : null;
+    })(),
     bestFlip: flipsByProfit[0] || null,
     worstFlip: flipsByProfit.length > 1 ? flipsByProfit[flipsByProfit.length - 1] : null,
     topGainers: movers.slice(0, 3),

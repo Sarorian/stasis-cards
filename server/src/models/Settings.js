@@ -14,6 +14,10 @@ const settingsSchema = new mongoose.Schema(
       },
     ],
     pricesUpdatedAt: Date,
+    // The day the app's numbers start (everything before is "Year 1" from the old system)
+    startDate: { type: String, default: null },
+    // Summary of the old system's records, shown separately on the Dashboard
+    yearOne: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { timestamps: true }
 );

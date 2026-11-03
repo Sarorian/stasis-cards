@@ -81,6 +81,13 @@ export const api = {
   addDebt: (body) => request('POST', '/debt', body),
   deleteDebt: (id) => request('DELETE', `/debt/${id}`),
 
+  setup: () => request('GET', '/setup'),
+  setStartDate: (date) => request('PUT', '/setup/start-date', { date }),
+  saveYearOne: (yearOne) => request('PUT', '/setup/year-one', { yearOne }),
+  addOpeningCards: (cards) => request('POST', '/setup/cards', { cards }),
+  deleteOpeningCard: (id) => request('DELETE', `/setup/cards/${id}`),
+  setOpeningBinder: (body) => request('PUT', '/setup/binder', body),
+
   admin: () => request('GET', '/admin'),
   setCapital: (body) => request('PUT', '/admin/capital', body),
   setWallets: (body) => request('PUT', '/admin/wallets', body),

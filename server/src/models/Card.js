@@ -27,6 +27,10 @@ const cardSchema = new mongoose.Schema(
     purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' },
     // Set when this card came in through a trade
     tradeIn: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
+    // Starting inventory: already owned on the start date, added without moving money
+    opening: { type: Boolean, default: false },
+    costEstimated: { type: Boolean, default: false }, // cost is a guess (e.g. 80% of market)
+    oldId: { type: String, default: null }, // id in the old system, so it can't be imported twice
     boughtDate: { ...dateStr, required: true },
     cost: { type: Number, required: true, min: 0 },
     marketAtPurchase: { type: Number, required: true, min: 0 },
