@@ -4,6 +4,8 @@ export const CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 export const GRADERS = ['PSA', 'CGC', 'BGS', 'TAG'];
 // The two partners the business can owe money to
 export const PARTNERS = ['Owen', 'Ben'];
+// Card language. Japanese Pokemon has its own price catalog; other Japanese cards are priced by hand.
+export const LANGUAGES = ['EN', 'JP'];
 
 // Business dates are recorded at a fixed UTC-7 offset.
 export const TZ_OFFSET_HOURS = -7;

@@ -57,6 +57,7 @@ r.post('/', ah(async (req, res) => {
         name: c.name,
         number: c.number || '',
         game: c.game,
+        language: c.language === 'JP' ? 'JP' : 'EN',
         setName: c.setName || '',
         condition: isGraded ? 'NM' : c.condition || 'NM',
         graded: isGraded ? { company: c.graded.company, grade: String(c.graded.grade || '') } : { company: null, grade: null },

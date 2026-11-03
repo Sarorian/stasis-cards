@@ -55,6 +55,7 @@ export default function CardRow({ card, onChange }) {
           <div className="hint">
             {[card.number, card.setName, card.game].filter(Boolean).join(' · ')}{' '}
             <span className={`pill${graded ? ' graded' : ''}`}>{graded ? `${card.graded.company} ${card.graded.grade}` : card.condition}</span>
+            {card.language === 'JP' && <> <span className="pill jp" title="Japanese card">JP</span></>}
           </div>
           <div className="sources">
             {sources.map((s) =>

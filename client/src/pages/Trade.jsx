@@ -20,7 +20,7 @@ function spread(values, diff) {
 
 const blankIn = (game = 'Riftbound') => ({
   key: Math.random().toString(36).slice(2),
-  game, name: '', number: '', setName: '', imageUrl: '', external: {}, sources: [], pick: null,
+  game, language: 'EN', name: '', number: '', setName: '', imageUrl: '', external: {}, sources: [], pick: null,
   condition: 'NM', graded: false, company: 'PSA', grade: '',
   market: '', value: '', valueTouched: false, msg: '',
 });
@@ -200,7 +200,7 @@ function NewTrade({ onDone }) {
         outCards: ours.map((o) => ({ id: o.id, value: num(o.value) })),
         outBinder: num(ourBinder.count) > 0 ? { count: num(ourBinder.count), value: outBinderValue } : null,
         inCards: theirs.map((t) => ({
-          name: t.name.trim(), number: t.number.trim(), game: t.game, setName: t.setName, imageUrl: t.imageUrl,
+          name: t.name.trim(), number: t.number.trim(), game: t.game, language: t.language || 'EN', setName: t.setName, imageUrl: t.imageUrl,
           external: t.external, sources: t.sources, condition: t.condition,
           graded: t.graded ? { company: t.company, grade: String(t.grade).trim() } : null,
           market: num(t.market), value: num(t.value),
@@ -298,7 +298,8 @@ function NewTrade({ onDone }) {
               <div className="their-card-head">
                 <CardImage src={t.imageUrl} game={t.game} alt="" className="result-img" />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <CardFinder game={t.game} onGameChange={(g) => { setLastGame(g); patchTheirs(i, { game: g }); }} onPick={(r) => pickTheirs(i, r)} picked={Boolean(t.pick)} autoFocus={!t.pick && !t.name} />
+                  <CardFinder game={t.game} onGameChange={(g) => { setLastGame(g); patchTheirs(i, { game: g }); }} onPick={(r) => pickTheirs(i, r)} picked={Boolean(t.pick)} autoFocus={!t.pick && !t.name}
+                    language={t.language} onLanguageChange={(l) => patchTheirs(i, { language: l })} />
                 </div>
                 <button type="button" className="small ghost danger" aria-label="Remove card" onClick={() => setTheirs((ts) => ts.filter((_, j) => j !== i))}>✕</button>
               </div>

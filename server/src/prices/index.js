@@ -10,8 +10,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   Raw cards: TCGplayer market (pokemontcg.io first for Pokemon, then TCG API).
   Graded cards: PriceCharting graded price when configured, otherwise the raw price as a reference.
 */
-export async function lookup({ name, number, game, graded, external = {} }) {
-  const input = { name, number, game, graded, external };
+export async function lookup({ name, number, game, graded, language = 'EN', external = {} }) {
+  const input = { name, number, game, graded, language, external };
   const sources = [];
   const found = { imageUrl: '', setName: '', external: { ...external } };
   const errors = [];
@@ -61,6 +61,7 @@ export async function refreshCard(card, { force = false } = {}) {
     name: card.name,
     number: card.number,
     game: card.game,
+    language: card.language || 'EN',
     graded: card.graded?.company ? card.graded : null,
     external: card.external?.toObject ? card.external.toObject() : card.external || {},
   });
@@ -116,7 +117,12 @@ export function startUpdateAll() {
 
 async function run() {
   // Oldest prices first so a quota stop still refreshes the stalest cards
-  const cards = await Card.find({ status: 'in_stock', 'market.manualOverride': { $ne: true } }).sort({ 'market.updatedAt': 1 });
+  // Japanese cards other than Pokemon have no price source, so they're skipped (set their price with $)
+  const cards = await Card.find({
+    status: 'in_stock',
+    'market.manualOverride': { $ne: true },
+    $nor: [{ language: 'JP', game: { $ne: 'Pokemon' } }],
+  }).sort({ 'market.updatedAt': 1 });
   job.total = cards.length;
   for (const card of cards) {
     try {
@@ -124,7 +130,7 @@ async function run() {
       if (r.price) job.updated++;
       else job.notFound.push(`${card.name} ${card.number}`.trim());
       if (r.quotaHit) {
-        job.stoppedReason = 'Daily price lookup limit reached. The rest will update tomorrow, or upgrade the TCG API plan.';
+        job.stoppedReason = 'Daily price lookup limit reached. The rest will update tomorrow; run it again then.';
         job.done++;
         break;
       }

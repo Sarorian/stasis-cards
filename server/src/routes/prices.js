@@ -9,12 +9,12 @@ const r = Router();
 // "Find card" picker: shorthand text -> list of matching cards with prices
 // Query: q, game, broad? (1 = search the first word only)
 r.get('/search', ah(async (req, res) => {
-  const { q = '', game, broad } = req.query;
+  const { q = '', game, broad, language } = req.query;
   if (!GAMES.includes(game)) throw new HttpError(400, 'Pick a game.');
   try {
-    res.json(await searchCards({ text: String(q), game, broad: broad === '1' || broad === 'true' }));
+    res.json(await searchCards({ text: String(q), game, broad: broad === '1' || broad === 'true', language: language === 'JP' ? 'JP' : 'EN' }));
   } catch (err) {
-    if (err instanceof QuotaError) throw new HttpError(429, 'Daily lookup limit reached (100/day). Enter the card by hand for now.');
+    if (err instanceof QuotaError) throw new HttpError(429, 'Daily lookup limit reached. Enter the card by hand for now, or try again tomorrow.');
     if (err.status) throw err;
     throw new HttpError(502, `Card search failed: ${err.message}`);
   }
@@ -37,12 +37,12 @@ r.get('/graded', ah(async (req, res) => {
 // Look up market price + image for the Add purchase form
 // Query: name, number?, game, gradedCompany?, gradedGrade?
 r.get('/lookup', ah(async (req, res) => {
-  const { name, number = '', game, gradedCompany, gradedGrade } = req.query;
+  const { name, number = '', game, gradedCompany, gradedGrade, language = 'EN' } = req.query;
   if (!name || String(name).length < 2) throw new HttpError(400, 'Enter at least 2 letters of the card name.');
   if (!GAMES.includes(game)) throw new HttpError(400, 'Pick a game.');
   const graded = gradedCompany ? { company: gradedCompany, grade: gradedGrade } : null;
-  const result = await lookup({ name, number, game, graded });
-  res.json({ ...result, links: checkLinks({ name, number, game, graded }) });
+  const result = await lookup({ name, number, game, graded, language });
+  res.json({ ...result, links: checkLinks({ name, number, game, graded, language }) });
 }));
 
 // Quick-check links for any card

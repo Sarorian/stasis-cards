@@ -4,7 +4,7 @@ import CardImage from './CardImage.jsx';
 import CardFinder from './CardFinder.jsx';
 
 export const blankCard = (game = 'Pokemon') => ({
-  name: '', number: '', game, condition: 'NM', graded: false, company: 'PSA', grade: '',
+  name: '', number: '', game, language: 'EN', condition: 'NM', graded: false, company: 'PSA', grade: '',
   marketValue: '', cost: '', imageUrl: '', setName: '', external: {}, sources: [],
   pick: null, lookup: 'idle', lookupMsg: '',
 });
@@ -84,7 +84,8 @@ export default function CardEntry({ index, card, onPatch, onRemove, useTotal, al
       <div style={{ display: 'flex', gap: 14 }}>
         <CardImage src={card.imageUrl} game={card.game} alt={card.name || 'Card'} className="thumb" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <CardFinder game={card.game} onGameChange={(g) => set({ game: g })} onPick={choose} picked={Boolean(card.pick)} />
+          <CardFinder game={card.game} onGameChange={(g) => set({ game: g })} onPick={choose} picked={Boolean(card.pick)}
+            language={card.language} onLanguageChange={(l) => set({ language: l })} />
 
           <div className="form-row" style={{ gridTemplateColumns: '2fr 1fr 1.2fr', marginTop: 10 }}>
             <label className="field">Card name

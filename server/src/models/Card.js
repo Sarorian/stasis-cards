@@ -14,6 +14,7 @@ const cardSchema = new mongoose.Schema(
     number: { type: String, trim: true, default: '' },
     game: { type: String, enum: GAMES, required: true },
     setName: { type: String, default: '' },
+    language: { type: String, enum: ['EN', 'JP'], default: 'EN' },
 
     // Raw cards use condition; graded cards use graded.company + graded.grade
     condition: { type: String, enum: CONDITIONS, default: 'NM' },

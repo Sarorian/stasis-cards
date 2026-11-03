@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
-import { GAMES, money } from '../format.js';
+import { GAMES, money, canAutoPrice } from '../format.js';
 import CardImage from './CardImage.jsx';
 
 const quotaText = (n) => (n != null ? `${n} lookups left today` : '');
@@ -10,7 +10,7 @@ const quotaText = (n) => (n != null ? `${n} lookups left today` : '');
   Used by Add purchase and the Trade page. Calls onPick(result) with
   { name, number, setName, printing, price, imageUrl, source, url, external }.
 */
-export default function CardFinder({ game, onGameChange, onPick, picked = false, autoFocus = false, initialText = '' }) {
+export default function CardFinder({ game, onGameChange, onPick, picked = false, autoFocus = false, initialText = '', language = 'EN', onLanguageChange }) {
   const [text, setText] = useState(initialText);
   const [list, setList] = useState(null);
   const [searching, setSearching] = useState(false);
@@ -19,12 +19,13 @@ export default function CardFinder({ game, onGameChange, onPick, picked = false,
 
   async function find(broad = false) {
     const t = text.trim();
+    if (!canAutoPrice(game, language)) return;
     if (t.length < 2) return setError('Type part of the card name, like "jinx 301".');
     setSearching(true);
     setError('');
     setFilter('');
     try {
-      setList(await api.searchCards({ q: t, game, broad: broad ? '1' : undefined }));
+      setList(await api.searchCards({ q: t, game, broad: broad ? '1' : undefined, language: language === 'JP' ? 'JP' : undefined }));
     } catch (err) {
       setList(null);
       setError(err.message);
@@ -45,11 +46,19 @@ export default function CardFinder({ game, onGameChange, onPick, picked = false,
   return (
     <>
       <div className="form-row find-row">
-        <label className="field">Game
-          <select value={game} onChange={(e) => { close(); onGameChange(e.target.value); }}>
+        <div className="field">
+          <span className="split-label">
+            Game
+            {onLanguageChange && (
+              <label className="jp-toggle" title="Japanese card">
+                <input type="checkbox" checked={language === 'JP'} onChange={(e) => { close(); onLanguageChange(e.target.checked ? 'JP' : 'EN'); }} /> Japanese
+              </label>
+            )}
+          </span>
+          <select value={game} aria-label="Game" onChange={(e) => { close(); onGameChange(e.target.value); }}>
             {GAMES.map((g) => <option key={g}>{g}</option>)}
           </select>
-        </label>
+        </div>
         <label className="field">Find card
           <input
             value={text}
@@ -62,10 +71,15 @@ export default function CardFinder({ game, onGameChange, onPick, picked = false,
             }}
           />
         </label>
-        <button type="button" className="primary" onClick={() => find()} disabled={searching || text.trim().length < 2}>
+        <button type="button" className="primary" onClick={() => find()} disabled={searching || text.trim().length < 2 || !canAutoPrice(game, language)}>
           {searching ? 'Searching…' : picked ? 'Change' : 'Find card'}
         </button>
       </div>
+      {!canAutoPrice(game, language) && (
+        <div className="hint" style={{ marginTop: 4 }}>
+          There's no price source for Japanese {game} cards. Type the card in below; set its price by hand (in Inventory, the $ button keeps it from being overwritten).
+        </div>
+      )}
       {error && <div className="error">{error}</div>}
 
       {list && (

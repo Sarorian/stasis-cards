@@ -26,10 +26,16 @@ export const roiPct = (cost, market) => (cost > 0 ? ((market - cost) / cost) * 1
 const slug = (g) => ({ Pokemon: 'pokemon', 'One Piece': 'one-piece', Riftbound: 'riftbound' }[g] || 'misc');
 export const logoFor = (game) => `${import.meta.env.BASE_URL}logos/${slug(game)}.svg`;
 
-export function checkLinks({ name, number, game, graded }) {
+// Japanese Pokemon has its own price catalog; other Japanese cards are priced by hand
+export const canAutoPrice = (game, language) => language !== 'JP' || game === 'Pokemon';
+
+export function checkLinks({ name, number, game, graded, language }) {
+  const jp = language === 'JP';
   const gradeTxt = graded?.company ? `${graded.company} ${graded.grade}` : '';
-  const q = encodeURIComponent([name, number, gradeTxt].filter(Boolean).join(' '));
-  const cat = { Pokemon: 'pokemon', 'One Piece': 'one-piece-card-game', Riftbound: 'riftbound-league-of-legends-trading-card-game' }[game] || 'all';
+  const q = encodeURIComponent([name, number, jp ? 'Japanese' : '', gradeTxt].filter(Boolean).join(' '));
+  const cat = (jp
+    ? (game === 'Pokemon' ? 'pokemon-japan' : null)
+    : { Pokemon: 'pokemon', 'One Piece': 'one-piece-card-game', Riftbound: 'riftbound-league-of-legends-trading-card-game' }[game]) || 'all';
   return [
     ['TCGplayer', `https://www.tcgplayer.com/search/${cat}/product?q=${encodeURIComponent([name, number].filter(Boolean).join(' '))}`],
     ['eBay sold', `https://www.ebay.com/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`],

@@ -7,6 +7,7 @@ import CardImage from './CardImage.jsx';
 // Re-search a card and pick the exact printing; updates price, picture and what future updates follow
 export default function FindMatchForm({ card, onDone, onCancel }) {
   const [game, setGame] = useState(card.game);
+  const [language, setLanguage] = useState(card.language || 'EN');
   const [pick, setPick] = useState(null);
   const [rename, setRename] = useState(true);
   const [error, setError] = useState('');
@@ -19,7 +20,7 @@ export default function FindMatchForm({ card, onDone, onCancel }) {
     try {
       await api.linkCard(card._id, {
         external: pick.external, imageUrl: pick.imageUrl, setName: pick.setName, name: pick.name, number: pick.number,
-        price: pick.price, source: pick.source, url: pick.url, rename,
+        price: pick.price, source: pick.source, url: pick.url, rename, language,
       });
       onDone?.();
     } catch (err) {
@@ -31,6 +32,7 @@ export default function FindMatchForm({ card, onDone, onCancel }) {
   return (
     <div className="inline-form">
       <CardFinder game={game} onGameChange={setGame} onPick={(r) => { setPick(r); setError(''); }} picked={Boolean(pick)} autoFocus
+        language={language} onLanguageChange={(l) => { setLanguage(l); setPick(null); }}
         initialText={[card.name, card.number].filter(Boolean).join(' ')} />
       {game !== card.game && <div className="hint" style={{ marginTop: 4 }}>Searching in {game}. To change the card's game, use Edit.</div>}
 

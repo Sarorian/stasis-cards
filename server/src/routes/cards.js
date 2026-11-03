@@ -55,6 +55,7 @@ r.patch('/:id', ah(async (req, res) => {
     if (!GAMES.includes(b.game)) throw new HttpError(400, 'Pick a game.');
     card.game = b.game;
   }
+  if ('language' in b) card.language = b.language === 'JP' ? 'JP' : 'EN';
   if ('condition' in b) {
     if (!CONDITIONS.includes(b.condition)) throw new HttpError(400, 'Pick a condition.');
     card.condition = b.condition;
@@ -220,6 +221,7 @@ r.post('/:id/link', ah(async (req, res) => {
     pricechartingId: keep || undefined,
   };
   if (b.imageUrl) card.imageUrl = b.imageUrl;
+  if (b.language) card.language = b.language === 'JP' ? 'JP' : 'EN';
   if (b.rename) {
     if (String(b.name || '').trim()) card.name = String(b.name).trim();
     if (b.number !== undefined) card.number = String(b.number || '').trim();

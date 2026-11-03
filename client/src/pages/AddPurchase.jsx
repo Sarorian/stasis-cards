@@ -56,6 +56,7 @@ function SinglesForm() {
           name: c.name.trim(),
           number: c.number.trim(),
           game: c.game,
+          language: c.language || 'EN',
           condition: c.condition,
           graded: c.graded ? { company: c.company, grade: c.grade.trim() } : null,
           marketValue: Number(c.marketValue),

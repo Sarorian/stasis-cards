@@ -63,6 +63,16 @@ const TCGAPI_SLUGS = {
 };
 export const tcgapiState = { remaining: null };
 
+/*
+  Which tcgapi.dev catalog to use. Japanese Pokemon has its own ("pokemon-japan");
+  other Japanese cards have no catalog, so null = can't be priced automatically.
+*/
+export function tcgapiSlug(game, language = 'EN') {
+  if (language === 'JP') return game === 'Pokemon' ? 'pokemon-japan' : null;
+  return TCGAPI_SLUGS[game] || '';
+}
+export const canAutoPrice = (game, language = 'EN') => language !== 'JP' || game === 'Pokemon';
+
 function tcgapiHeaders() {
   return { 'X-API-Key': process.env.TCGAPI_KEY, Accept: 'application/json' };
 }
@@ -72,16 +82,19 @@ function trackQuota(json) {
   if (typeof left === 'number') tcgapiState.remaining = left;
 }
 
-async function tcgapiSearch(q, game, perPage = 50) {
+// slug: a catalog slug, or '' to search every game
+async function tcgapiSearch(q, slug, perPage = 50) {
   const params = new URLSearchParams({ q: cleanQuery(q), type: 'Cards', per_page: String(perPage) });
-  if (TCGAPI_SLUGS[game]) params.set('game', TCGAPI_SLUGS[game]);
+  if (slug) params.set('game', slug);
   const json = await getJson(`${TCGAPI}/search?${params}`, tcgapiHeaders());
   trackQuota(json);
   return json.data || [];
 }
 
-export async function tcgapi({ name, number, game, external = {} }) {
+export async function tcgapi({ name, number, game, language = 'EN', external = {} }) {
   if (!process.env.TCGAPI_KEY) return null;
+  const slug = tcgapiSlug(game, language);
+  if (slug === null) return null; // Japanese One Piece / Riftbound: no catalog
   if (tcgapiState.remaining === 0) throw new QuotaError('Daily price lookup limit reached.');
 
   // Already matched before: one cheap request for fresh prices
@@ -95,12 +108,12 @@ export async function tcgapi({ name, number, game, external = {} }) {
     }
   }
 
-  let results = await tcgapiSearch(name, game);
+  let results = await tcgapiSearch(name, slug);
   let hit = pickBest(results, { name, number }, (r) => r.name, (r) => r.number);
   // Nothing matched: retry with just the first word ("Jinx"), which pulls in every version
   const firstWord = cleanQuery(name).split(' ')[0];
   if (!hit && firstWord.length >= 2 && firstWord.toLowerCase() !== cleanQuery(name).toLowerCase()) {
-    results = await tcgapiSearch(firstWord, game, 100);
+    results = await tcgapiSearch(firstWord, slug, 100);
     hit = pickBest(results, { name, number }, (r) => r.name, (r) => r.number);
   }
   if (!hit) return null;
@@ -120,8 +133,8 @@ const POKE_VARIANTS = ['holofoil', 'normal', 'reverseHolofoil', '1stEditionHolof
 
 const pokeHeaders = () => (process.env.POKEMONTCG_API_KEY ? { 'X-Api-Key': process.env.POKEMONTCG_API_KEY } : {});
 
-export async function pokemontcg({ name, number, game, external = {} }) {
-  if (game !== 'Pokemon') return null;
+export async function pokemontcg({ name, number, game, language = 'EN', external = {} }) {
+  if (game !== 'Pokemon' || language === 'JP') return null; // pokemontcg.io is English only
   const headers = pokeHeaders();
 
   // Picked from search before: go straight to that card and printing
@@ -264,7 +277,10 @@ async function pokemontcgSearch(ws, numbers) {
   Search for the picker. Returns every candidate, best fits first.
   broad = search only the first word (for when shorthand like "lc" confuses the search)
 */
-export async function searchCards({ text, game, broad = false }) {
+export async function searchCards({ text, game, broad = false, language = 'EN' }) {
+  if (!canAutoPrice(game, language)) {
+    throw Object.assign(new Error(`There's no price source for Japanese ${game} cards. Type the card in by hand and set its price with the $ button.`), { status: 400 });
+  }
   const parsed = parseShorthand(text);
   const first = parsed.words[0] || '';
   const queryWords = broad ? (first ? [first] : []) : parsed.words;
@@ -289,7 +305,7 @@ export async function searchCards({ text, game, broad = false }) {
     return out;
   };
 
-  if (game === 'Pokemon' && queryWords.length) {
+  if (game === 'Pokemon' && language !== 'JP' && queryWords.length) {
     const poke = (ws) => cachedCall(`ptcg|${ws.join(' ')}|${parsed.numbers.join(',')}`, () => pokemontcgSearch(ws, parsed.numbers));
     try {
       results = await poke(queryWords);
@@ -304,11 +320,11 @@ export async function searchCards({ text, game, broad = false }) {
     }
   }
   if (!results.length) {
-    const g = TCGAPI_SLUGS[game] ? game : null;
-    const tcg = (query) => cachedCall(`tcg|${g}|${query.toLowerCase()}`, async () => {
+    const slug = tcgapiSlug(game, language);
+    const tcg = (query) => cachedCall(`tcg|${slug}|${query.toLowerCase()}`, async () => {
       if (!process.env.TCGAPI_KEY) throw new Error(errors[0] || 'TCGAPI_KEY is not set in server/.env.');
       if (tcgapiState.remaining === 0) throw new QuotaError('Daily price lookup limit reached.');
-      return (await tcgapiSearch(query, g, 100)).map(fromTcgapi);
+      return (await tcgapiSearch(query, slug, 100)).map(fromTcgapi);
     });
     results = await tcg(q);
     source = 'tcgapi.dev';
@@ -367,10 +383,13 @@ export async function pricecharting({ name, number, graded, external = {} }) {
 
 /* ---------------- Quick-check links (no API needed) ---------------- */
 
-export function checkLinks({ name, number, game, graded }) {
-  const q = [name, number, graded?.company ? `${graded.company} ${graded.grade}` : ''].filter(Boolean).join(' ');
+export function checkLinks({ name, number, game, graded, language = 'EN' }) {
+  const jp = language === 'JP';
+  const q = [name, number, jp ? 'Japanese' : '', graded?.company ? `${graded.company} ${graded.grade}` : ''].filter(Boolean).join(' ');
   const e = encodeURIComponent(q);
-  const tcgCat = { Pokemon: 'pokemon', 'One Piece': 'one-piece-card-game', Riftbound: 'riftbound-league-of-legends-trading-card-game' }[game];
+  const tcgCat = jp
+    ? (game === 'Pokemon' ? 'pokemon-japan' : null)
+    : { Pokemon: 'pokemon', 'One Piece': 'one-piece-card-game', Riftbound: 'riftbound-league-of-legends-trading-card-game' }[game];
   return {
     tcgplayer: `https://www.tcgplayer.com/search/${tcgCat || 'all'}/product?q=${encodeURIComponent([name, number].filter(Boolean).join(' '))}`,
     ebaySold: `https://www.ebay.com/sch/i.html?_nkw=${e}&LH_Sold=1&LH_Complete=1`,

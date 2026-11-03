@@ -83,6 +83,7 @@ r.post('/cards', ah(async (req, res) => {
       name: String(c.name).trim(),
       number: String(c.number || '').trim(),
       game: c.game,
+      language: c.language === 'JP' ? 'JP' : 'EN',
       setName: c.setName || '',
       condition: graded.company ? 'NM' : (CONDITIONS.includes(c.condition) ? c.condition : 'NM'),
       graded,

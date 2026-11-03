@@ -32,7 +32,7 @@ export default function Setup() {
         <ol className="setup-steps">
           <li>Set your real wallet balances on the <Link to="/admin">Admin page</Link> (Correct wallet balances).</li>
           <li>Enter Owen's and Ben's debt on the <Link to="/debt">Debt page</Link> ("From the old sheet").</li>
-          <li>On the <Link to="/">Dashboard</Link>, run <b>Update market prices</b> so old cards get real market prices (100 lookups a day; cards without a price go first).</li>
+          <li>On the <Link to="/">Dashboard</Link>, run <b>Update market prices</b> so old cards get real market prices (it uses your daily lookups; cards without a price go first).</li>
         </ol>
       </div>
     </>
@@ -228,7 +228,7 @@ export function YearOneFigures({ y }) {
 /* ------------------------------------------------------------------ */
 
 const blankNew = (game = 'Pokemon') => ({
-  game, pick: null, name: '', number: '', setName: '', imageUrl: '', external: {}, sources: [],
+  game, language: 'EN', pick: null, name: '', number: '', setName: '', imageUrl: '', external: {}, sources: [],
   condition: 'NM', graded: false, company: 'PSA', grade: '', market: '', cost: '', boughtDate: '',
 });
 
@@ -260,12 +260,12 @@ function NewCards({ startDate, onChange }) {
     setBusy(true);
     try {
       const res = await api.addOpeningCards([{
-        name: f.name, number: f.number, setName: f.setName, game: f.game, imageUrl: f.imageUrl, external: f.external, sources: f.sources,
+        name: f.name, number: f.number, setName: f.setName, game: f.game, language: f.language, imageUrl: f.imageUrl, external: f.external, sources: f.sources,
         condition: f.condition, graded: f.graded ? { company: f.company, grade: f.grade } : null,
         market: market || undefined, cost, costEstimated: estimated, boughtDate: f.boughtDate || startDate || today(),
       }]);
-      setAdded((a) => [{ id: res.ids[0], name: f.name, number: f.number, game: f.game, imageUrl: f.imageUrl, cost, estimated, market }, ...a]);
-      setF({ ...blankNew(f.game), boughtDate: f.boughtDate });
+      setAdded((a) => [{ id: res.ids[0], name: f.name, number: f.number, game: f.language === 'JP' ? `${f.game} JP` : f.game, imageUrl: f.imageUrl, cost, estimated, market }, ...a]);
+      setF({ ...blankNew(f.game), language: f.language, boughtDate: f.boughtDate });
       setFinderKey((k) => k + 1);
       onChange();
     } catch (err) {
@@ -295,7 +295,8 @@ function NewCards({ startDate, onChange }) {
       <div style={{ display: 'flex', gap: 14 }}>
         <CardImage src={f.imageUrl} game={f.game} alt={f.name || 'Card'} className="thumb" />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <CardFinder key={finderKey} game={f.game} onGameChange={(g) => setF({ ...f, game: g })} onPick={pick} picked={Boolean(f.pick)} />
+          <CardFinder key={finderKey} game={f.game} onGameChange={(g) => setF({ ...f, game: g })} onPick={pick} picked={Boolean(f.pick)}
+            language={f.language} onLanguageChange={(l) => setF({ ...f, language: l })} />
           <div className="form-row" style={{ gridTemplateColumns: '2fr 1fr 1.2fr', marginTop: 10 }}>
             <label className="field">Card name<input value={f.name} placeholder="Filled in when you pick a card" onChange={set('name')} /></label>
             <label className="field">Number<input value={f.number} onChange={set('number')} /></label>

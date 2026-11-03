@@ -10,7 +10,7 @@ export default function EditCardForm({ card, onDone, onCancel }) {
   const oldPaid = r2(card.cost - fees);
   const wasGraded = Boolean(card.graded?.company);
   const [f, setF] = useState({
-    name: card.name, number: card.number || '', setName: card.setName || '', game: card.game,
+    name: card.name, number: card.number || '', setName: card.setName || '', game: card.game, japanese: card.language === 'JP',
     condition: card.condition || 'NM', graded: wasGraded, company: card.graded?.company || 'PSA', grade: card.graded?.grade || '',
     boughtDate: card.boughtDate || '', paid: String(oldPaid), notes: card.notes || '',
     feeAmount: '', feeWallet: 'Cash', feeDate: today(),
@@ -31,7 +31,7 @@ export default function EditCardForm({ card, onDone, onCancel }) {
     setBusy(true);
     try {
       await api.updateCard(card._id, {
-        name: f.name.trim(), number: f.number.trim(), setName: f.setName.trim(), game: f.game,
+        name: f.name.trim(), number: f.number.trim(), setName: f.setName.trim(), game: f.game, language: f.japanese ? 'JP' : 'EN',
         condition: f.condition, graded: f.graded ? { company: f.company, grade: String(f.grade).trim() } : null,
         boughtDate: f.boughtDate || card.boughtDate, notes: f.notes,
         ...(paidDiff !== 0 ? { paid: Number(f.paid) } : {}),
@@ -68,6 +68,10 @@ export default function EditCardForm({ card, onDone, onCancel }) {
         <label className="field">Set<input value={f.setName} onChange={set('setName')} /></label>
         <label className="field">Game<select value={f.game} onChange={set('game')}>{GAMES.map((g) => <option key={g}>{g}</option>)}</select></label>
       </div>
+      <label className="check" style={{ marginTop: 8, fontSize: 13 }}>
+        <input type="checkbox" checked={f.japanese} onChange={set('japanese')} /> Japanese card
+        {f.japanese && f.game !== 'Pokemon' && <span className="faint"> · no price source; set its price with $</span>}
+      </label>
 
       <div className="form-row" style={{ gridTemplateColumns: 'auto 1fr 1fr 1fr 1fr', marginTop: 10 }}>
         <label className="check" style={{ paddingBottom: 8 }}><input type="checkbox" checked={f.graded} onChange={set('graded')} /> Graded</label>
