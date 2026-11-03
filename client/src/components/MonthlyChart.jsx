@@ -1,6 +1,8 @@
 import { fmtMonth, money } from '../format.js';
 
-export default function MonthlyChart({ months: all }) {
+// category: 'All' or a game name / 'Binder' (uses month.byCat)
+export default function MonthlyChart({ months: raw, category = 'All' }) {
+  const all = raw.map((m) => (category === 'All' || !m.byCat ? m : { month: m.month, ...m.byCat[category] }));
   // Skip empty months before the first sale, but always show the last 6
   const first = all.findIndex((m) => m.count > 0);
   const months = all.slice(Math.min(first === -1 ? all.length : first, all.length - 6));

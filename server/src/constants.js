@@ -2,6 +2,8 @@ export const GAMES = ['Pokemon', 'One Piece', 'Riftbound', 'Misc'];
 export const WALLETS = ['Cash', 'Venmowen', 'Benmo', 'Zelle'];
 export const CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 export const GRADERS = ['PSA', 'CGC', 'BGS', 'TAG'];
+// The two partners the business can owe money to
+export const PARTNERS = ['Owen', 'Ben'];
 
 // Business dates are recorded at a fixed UTC-7 offset.
 export const TZ_OFFSET_HOURS = -7;

@@ -15,9 +15,15 @@ export function numbersMatch(a, b) {
   return norm(a) === norm(b) || numKey(a) === numKey(b);
 }
 
+// Letters and digits only, so "Jinx, Loose Cannon" ~ "Jinx - Loose Cannon (Overnumbered)"
+const nameKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+// Text the search APIs can use: punctuation becomes spaces
+export const cleanQuery = (s) => String(s || '').replace(/[^\p{L}\p{N}'*]+/gu, ' ').replace(/\s+/g, ' ').trim();
+
 const nameScore = (want, got) => {
-  const w = norm(want);
-  const g = norm(got);
+  const w = nameKey(want);
+  const g = nameKey(got);
+  if (!w) return 0;
   if (g === w) return 3;
   if (g.startsWith(w)) return 2;
   if (g.includes(w)) return 1;
@@ -66,8 +72,8 @@ function trackQuota(json) {
   if (typeof left === 'number') tcgapiState.remaining = left;
 }
 
-async function tcgapiSearch(q, game) {
-  const params = new URLSearchParams({ q, type: 'Cards', per_page: '50' });
+async function tcgapiSearch(q, game, perPage = 50) {
+  const params = new URLSearchParams({ q: cleanQuery(q), type: 'Cards', per_page: String(perPage) });
   if (TCGAPI_SLUGS[game]) params.set('game', TCGAPI_SLUGS[game]);
   const json = await getJson(`${TCGAPI}/search?${params}`, tcgapiHeaders());
   trackQuota(json);
@@ -91,8 +97,10 @@ export async function tcgapi({ name, number, game, external = {} }) {
 
   let results = await tcgapiSearch(name, game);
   let hit = pickBest(results, { name, number }, (r) => r.name, (r) => r.number);
-  if (!hit && number && name.length >= 2) {
-    results = await tcgapiSearch(`${name} ${number}`, game);
+  // Nothing matched: retry with just the first word ("Jinx"), which pulls in every version
+  const firstWord = cleanQuery(name).split(' ')[0];
+  if (!hit && firstWord.length >= 2 && firstWord.toLowerCase() !== cleanQuery(name).toLowerCase()) {
+    results = await tcgapiSearch(firstWord, game, 100);
     hit = pickBest(results, { name, number }, (r) => r.name, (r) => r.number);
   }
   if (!hit) return null;
@@ -110,9 +118,32 @@ export async function tcgapi({ name, number, game, external = {} }) {
 
 const POKE_VARIANTS = ['holofoil', 'normal', 'reverseHolofoil', '1stEditionHolofoil', '1stEditionNormal', 'unlimitedHolofoil'];
 
-export async function pokemontcg({ name, number, game }) {
+const pokeHeaders = () => (process.env.POKEMONTCG_API_KEY ? { 'X-Api-Key': process.env.POKEMONTCG_API_KEY } : {});
+
+export async function pokemontcg({ name, number, game, external = {} }) {
   if (game !== 'Pokemon') return null;
-  const headers = process.env.POKEMONTCG_API_KEY ? { 'X-Api-Key': process.env.POKEMONTCG_API_KEY } : {};
+  const headers = pokeHeaders();
+
+  // Picked from search before: go straight to that card and printing
+  if (external.pokemontcgId) {
+    const json = await getJson(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(external.pokemontcgId)}`, headers);
+    const c = json.data;
+    const prices = c?.tcgplayer?.prices || {};
+    const variant = prices[external.pokemontcgVariant]?.market
+      ? external.pokemontcgVariant
+      : POKE_VARIANTS.find((v) => prices[v]?.market) || Object.keys(prices).find((v) => prices[v]?.market);
+    if (c && variant) {
+      return {
+        source: 'TCGplayer (pokemontcg.io)',
+        price: round2(prices[variant].market),
+        imageUrl: c.images?.large || c.images?.small || '',
+        setName: c.set?.name || '',
+        url: c.tcgplayer?.url,
+        external: { pokemontcgId: c.id, pokemontcgVariant: variant },
+      };
+    }
+  }
+
   const clean = name.replace(/"/g, '');
   const parts = [`name:"${clean}"`];
   if (number) parts.push(`number:${numKey(number)}`);
@@ -127,8 +158,173 @@ export async function pokemontcg({ name, number, game }) {
     imageUrl: hit.images?.large || hit.images?.small || '',
     setName: hit.set?.name || '',
     url: hit.tcgplayer?.url,
-    external: { pokemontcgId: hit.id },
+    external: { pokemontcgId: hit.id, ...(variant ? { pokemontcgVariant: variant } : {}) },
   };
+}
+
+/* ---------------- Card search for the "Find card" picker ---------------- */
+
+const SEARCH_TTL = 6 * 3600e3; // repeat searches within 6 hours are free
+const searchCache = new Map();
+
+const hasDigit = (t) => /\d/.test(t);
+const words = (s) => cleanQuery(s).toLowerCase().split(' ').filter(Boolean);
+const POKE_VARIANT_LABEL = {
+  normal: 'Normal', holofoil: 'Holofoil', reverseHolofoil: 'Reverse Holofoil',
+  '1stEditionHolofoil': '1st Edition Holofoil', '1stEditionNormal': '1st Edition', unlimitedHolofoil: 'Unlimited Holofoil',
+};
+
+// "jinx lc 301" -> { words: ['jinx', 'lc'], numbers: ['301'] }
+export function parseShorthand(text) {
+  const tokens = String(text || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    words: tokens.filter((t) => !hasDigit(t)).flatMap(words),
+    numbers: tokens.filter(hasDigit).map((t) => t.replace(/^#/, '')),
+  };
+}
+
+// Does a number the user typed fit this card's number? "301" fits "301/298"; "119" and "op05" fit "OP05-119"
+function numberFits(cardNumber, typed) {
+  if (!cardNumber || !typed) return false;
+  if (numbersMatch(cardNumber, typed)) return true;
+  const parts = norm(cardNumber).split('/')[0].split('-').map((p) => p.replace(/^0+(?=\d)/, ''));
+  return norm(typed).split('/')[0].split('-').every((p) => parts.includes(p.replace(/^0+(?=\d)/, '')));
+}
+
+// Higher = better fit for the shorthand. Results are sorted, never hidden.
+function fitScore(card, { words: ws, numbers }) {
+  let score = 0;
+  for (const n of numbers) if (numberFits(card.number, n)) score += norm(card.number) === norm(n) ? 120 : 100;
+  const nameWords = words(card.name);
+  const initials = nameWords.map((w) => w[0]).join('');
+  const setWords = words(card.setName);
+  for (const w of ws) {
+    if (nameWords.some((nw) => nw.startsWith(w))) score += 10;
+    else if (w.length >= 2 && initials.includes(w)) score += 6; // "lc" = Loose Cannon
+    else if (setWords.some((sw) => sw.startsWith(w))) score += 4;
+  }
+  return score;
+}
+
+function fromTcgapi(r) {
+  return {
+    id: `tcgapi:${r.id}:${r.printing || ''}`,
+    name: r.name,
+    number: r.number || '',
+    setName: r.set_name || '',
+    printing: r.printing || '',
+    rarity: r.rarity || '',
+    price: r.market_price ? round2(r.market_price) : null,
+    imageUrl: r.image_url || '',
+    source: 'TCGplayer',
+    url: r.tcgplayer_id ? `https://www.tcgplayer.com/product/${r.tcgplayer_id}` : undefined,
+    external: { tcgapiId: String(r.id), tcgapiPrinting: r.printing || '' },
+  };
+}
+
+// One row per printing that has a price (Holofoil, Reverse Holofoil, ...)
+function fromPokemontcg(c) {
+  const prices = c.tcgplayer?.prices || {};
+  const variants = Object.keys(prices).filter((v) => prices[v]?.market);
+  const base = {
+    name: c.name,
+    number: c.number && c.set?.printedTotal ? `${c.number}/${c.set.printedTotal}` : c.number || '',
+    setName: c.set?.name || '',
+    rarity: c.rarity || '',
+    imageUrl: c.images?.small || c.images?.large || '',
+    source: 'TCGplayer (pokemontcg.io)',
+    url: c.tcgplayer?.url,
+  };
+  if (!variants.length) return [{ ...base, id: `ptcg:${c.id}`, printing: '', price: null, external: { pokemontcgId: c.id } }];
+  return variants.map((v) => ({
+    ...base,
+    id: `ptcg:${c.id}:${v}`,
+    printing: POKE_VARIANT_LABEL[v] || v,
+    price: round2(prices[v].market),
+    external: { pokemontcgId: c.id, pokemontcgVariant: v },
+  }));
+}
+
+async function pokemontcgSearch(ws, numbers) {
+  if (!ws.length) return [];
+  const nameParts = ws.map((w) => `name:*${w.replace(/[^a-z0-9]/g, '')}*`).filter((p) => p !== 'name:**');
+  const run = async (parts) => {
+    const q = encodeURIComponent(parts.join(' '));
+    const json = await getJson(`https://api.pokemontcg.io/v2/cards?pageSize=100&orderBy=-set.releaseDate&q=${q}`, pokeHeaders());
+    return json.data || [];
+  };
+  let cards = [];
+  const num = numbers.map((n) => numKey(n)).find((n) => /^[a-z0-9]+$/i.test(n));
+  if (num) cards = await run([...nameParts, `number:${num}`]);
+  if (!cards.length) cards = await run(nameParts);
+  return cards.flatMap(fromPokemontcg);
+}
+
+/*
+  Search for the picker. Returns every candidate, best fits first.
+  broad = search only the first word (for when shorthand like "lc" confuses the search)
+*/
+export async function searchCards({ text, game, broad = false }) {
+  const parsed = parseShorthand(text);
+  const first = parsed.words[0] || '';
+  const queryWords = broad ? (first ? [first] : []) : parsed.words;
+  // No words at all ("op05-119"): search the text as typed
+  const q = queryWords.length ? queryWords.join(' ') : cleanQuery(text);
+  if (q.length < 2) throw Object.assign(new Error('Type at least 2 letters of the card name.'), { status: 400 });
+
+  let results = [];
+  let source = '';
+  let broadened = broad;
+  let cached = true; // stays true only if every API call came from the cache
+  const errors = [];
+
+  // Each underlying API call is cached, so retries and repeat searches cost nothing
+  const cachedCall = async (key, fn) => {
+    const hit = searchCache.get(key);
+    if (hit && Date.now() - hit.at < SEARCH_TTL) return hit.results;
+    cached = false;
+    const out = await fn();
+    searchCache.set(key, { at: Date.now(), results: out });
+    if (searchCache.size > 300) searchCache.delete(searchCache.keys().next().value);
+    return out;
+  };
+
+  if (game === 'Pokemon' && queryWords.length) {
+    const poke = (ws) => cachedCall(`ptcg|${ws.join(' ')}|${parsed.numbers.join(',')}`, () => pokemontcgSearch(ws, parsed.numbers));
+    try {
+      results = await poke(queryWords);
+      source = 'pokemontcg.io';
+      // Shorthand like "char ex" may miss; try the first word alone (free)
+      if (!results.length && queryWords.length > 1) {
+        results = await poke([first]);
+        broadened = true;
+      }
+    } catch (err) {
+      errors.push(err.message);
+    }
+  }
+  if (!results.length) {
+    const g = TCGAPI_SLUGS[game] ? game : null;
+    const tcg = (query) => cachedCall(`tcg|${g}|${query.toLowerCase()}`, async () => {
+      if (!process.env.TCGAPI_KEY) throw new Error(errors[0] || 'TCGAPI_KEY is not set in server/.env.');
+      if (tcgapiState.remaining === 0) throw new QuotaError('Daily price lookup limit reached.');
+      return (await tcgapiSearch(query, g, 100)).map(fromTcgapi);
+    });
+    results = await tcg(q);
+    source = 'tcgapi.dev';
+    // Zero results usually means a shorthand word the search didn't understand: one retry with the first word
+    if (!results.length && !broadened && queryWords.length > 1) {
+      results = await tcg(first);
+      broadened = true;
+    }
+  }
+
+  const ranked = results
+    .map((r, i) => ({ ...r, fit: fitScore(r, parsed), order: i }))
+    .sort((a, b) => b.fit - a.fit || a.order - b.order)
+    .map(({ order, ...r }) => r);
+
+  return { results: ranked, query: q, source, cached, broadened, numbers: parsed.numbers, quotaRemaining: tcgapiState.remaining };
 }
 
 /* ---------------- PriceCharting - graded prices (paid token, optional) ---------------- */

@@ -43,8 +43,10 @@ r.post('/sell', ah(async (req, res) => {
 }));
 
 r.delete('/:id', ah(async (req, res) => {
+  const existing = await BinderEntry.findById(req.params.id);
+  if (!existing) throw new HttpError(404, 'Entry not found.');
+  if (existing.trade) throw new HttpError(409, 'This binder entry is part of a trade. Undo the trade on the Trade page instead.');
   const entry = await BinderEntry.findByIdAndDelete(req.params.id);
-  if (!entry) throw new HttpError(404, 'Entry not found.');
   await Transaction.deleteMany({ binderEntry: entry._id });
   res.json({ deleted: entry._id, pool: await binderPool() });
 }));

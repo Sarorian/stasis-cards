@@ -2,9 +2,37 @@ import { Router } from 'express';
 import { ah, HttpError } from '../util.js';
 import { GAMES } from '../constants.js';
 import { lookup, startUpdateAll, jobStatus } from '../prices/index.js';
-import { checkLinks } from '../prices/providers.js';
+import { checkLinks, searchCards, pricecharting, QuotaError } from '../prices/providers.js';
 
 const r = Router();
+
+// "Find card" picker: shorthand text -> list of matching cards with prices
+// Query: q, game, broad? (1 = search the first word only)
+r.get('/search', ah(async (req, res) => {
+  const { q = '', game, broad } = req.query;
+  if (!GAMES.includes(game)) throw new HttpError(400, 'Pick a game.');
+  try {
+    res.json(await searchCards({ text: String(q), game, broad: broad === '1' || broad === 'true' }));
+  } catch (err) {
+    if (err instanceof QuotaError) throw new HttpError(429, 'Daily lookup limit reached (100/day). Enter the card by hand for now.');
+    if (err.status) throw err;
+    throw new HttpError(502, `Card search failed: ${err.message}`);
+  }
+}));
+
+// Graded price for a picked card (PriceCharting). Never uses TCG API lookups.
+// Query: name, number?, gradedCompany, gradedGrade
+r.get('/graded', ah(async (req, res) => {
+  const { name, number = '', gradedCompany, gradedGrade } = req.query;
+  if (!name || !gradedCompany || !gradedGrade) throw new HttpError(400, 'Need a card name, grading company, and grade.');
+  if (!process.env.PRICECHARTING_TOKEN) return res.json({ configured: false, hit: null });
+  try {
+    const hit = await pricecharting({ name, number, graded: { company: gradedCompany, grade: gradedGrade } });
+    res.json({ configured: true, hit });
+  } catch (err) {
+    res.json({ configured: true, hit: null, error: err.message });
+  }
+}));
 
 // Look up market price + image for the Add purchase form
 // Query: name, number?, game, gradedCompany?, gradedGrade?

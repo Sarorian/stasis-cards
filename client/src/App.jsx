@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard.jsx';
 import Inventory from './pages/Inventory.jsx';
 import AddPurchase from './pages/AddPurchase.jsx';
 import Admin from './pages/Admin.jsx';
+import Trade from './pages/Trade.jsx';
+import Misc from './pages/Misc.jsx';
+import Debt from './pages/Debt.jsx';
 
 export default function App() {
   const [authed, setAuthed] = useState(Boolean(getToken()));
@@ -33,6 +36,9 @@ export default function App() {
         <NavLink to="/" end className="navlink">Dashboard</NavLink>
         <NavLink to="/inventory" className="navlink">Inventory</NavLink>
         <NavLink to="/add" className="navlink">Add purchase</NavLink>
+        <NavLink to="/trade" className="navlink">Trade</NavLink>
+        <NavLink to="/misc" className="navlink">Misc</NavLink>
+        <NavLink to="/debt" className="navlink">Debt</NavLink>
         <NavLink to="/admin" className="navlink">Admin</NavLink>
         <button className="ghost small" onClick={logout}>Log out</button>
       </header>
@@ -41,6 +47,9 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/add" element={<AddPurchase />} />
+          <Route path="/trade" element={<Trade />} />
+          <Route path="/misc" element={<Misc />} />
+          <Route path="/debt" element={<Debt />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

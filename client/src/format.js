@@ -2,6 +2,9 @@ export const GAMES = ['Pokemon', 'One Piece', 'Riftbound', 'Misc'];
 export const WALLETS = ['Cash', 'Venmowen', 'Benmo', 'Zelle'];
 export const CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 export const GRADERS = ['PSA', 'CGC', 'BGS', 'TAG'];
+export const PARTNERS = ['Owen', 'Ben'];
+// Each partner's own Venmo wallet (default when they keep Venmo to cleanse debt)
+export const partnerWallet = (person) => ({ Owen: 'Venmowen', Ben: 'Benmo' }[person] || 'Cash');
 
 // All business dates use a fixed UTC-7 offset
 export const today = () => new Date(Date.now() - 7 * 3600e3).toISOString().slice(0, 10);

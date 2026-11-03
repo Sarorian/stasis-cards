@@ -42,7 +42,7 @@ function SinglesForm() {
   async function save() {
     for (const [i, c] of cards.entries()) {
       if (!c.name.trim()) return setError(`Card ${i + 1} needs a name.`);
-      if (!(Number(c.marketValue) > 0)) return setError(`Card ${i + 1} needs a market value. Use "Find price" or enter it.`);
+      if (!(Number(c.marketValue) > 0)) return setError(`Card ${i + 1} needs a market value. Use "Find card" or enter it.`);
       if (!useTotal && !(Number(c.cost) > 0)) return setError(`Card ${i + 1} needs a bought-for price, or fill in the total purchase cost.`);
       if (c.graded && !c.grade.trim()) return setError(`Card ${i + 1} needs a grade.`);
     }

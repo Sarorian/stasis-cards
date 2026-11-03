@@ -6,10 +6,13 @@ import StatCard from '../components/StatCard.jsx';
 import PriceUpdateButton from '../components/PriceUpdateButton.jsx';
 import MonthlyChart from '../components/MonthlyChart.jsx';
 import WalletsPanel from '../components/WalletsPanel.jsx';
+import GamePerformance from '../components/GamePerformance.jsx';
+import { GAMES } from '../format.js';
 
 export default function Dashboard() {
   const [s, setS] = useState(null);
   const [error, setError] = useState('');
+  const [chartCat, setChartCat] = useState('All');
 
   const load = useCallback(() => {
     api.stats().then(setS).catch((e) => setError(e.message));
@@ -26,17 +29,15 @@ export default function Dashboard() {
         <PriceUpdateButton lastUpdated={s.pricesUpdatedAt} onDone={load} />
       </div>
 
-      {s.startingCapital === 0 && (
-        <div className="toast">
-          Set your starting capital on the <Link to="/admin">Admin page</Link> so ROI can be calculated.
-        </div>
-      )}
-
       <div className="grid stats">
-        <StatCard hero label="ROI" value={pct(s.roiPct)} tone={tone(s.roiPct)} sub={`vs ${money(s.startingCapital)} starting capital`} />
+        <StatCard hero label="ROI" value={pct(s.roiPct)} tone={tone(s.roiPct)} sub={s.totalSpent > 0 ? `made vs ${money(s.totalSpent)} spent` : 'buy something to see ROI'} />
         <StatCard hero label="Liquid total" value={money(s.liquid)} sub={`${money(s.cash)} cash · ${money(s.digital)} digital`} />
-        <StatCard hero label="Net profit" value={money(s.profit)} tone={tone(s.profit)} sub={`${pct(s.marginPct)} margin on cost`} />
-        <StatCard hero label="Net worth" value={money(s.netWorth)} sub="liquid + inventory + binder" />
+        <StatCard hero label="Net profit" value={money(s.profit)} tone={tone(s.profit)} sub={s.expenses > 0 ? `after ${money(s.expenses)} expenses · ${pct(s.marginPct)} margin` : `${pct(s.marginPct)} margin on cost`} />
+        <StatCard hero label="Net worth" value={money(s.netWorth)} sub={s.debt.total > 0 ? `liquid + stock − ${money(s.debt.total)} debt` : 'liquid + inventory + binder + sealed'} />
+        <Link to="/debt" className="stat-link">
+          <StatCard label="Debt owed" value={money(s.debt.total)} tone={s.debt.total > 0 ? 'neg' : ''} sub={s.debt.people.map((p) => `${p.person} ${money(p.owed)}`).join(' · ')} />
+        </Link>
+        <StatCard label="Expenses" value={money(s.expenses)} sub="paid by Owen/Ben (shows, gas, food)" />
         <StatCard label="Revenue" value={money(s.revenue)} sub={`${s.soldCount} sales${s.fees ? ` · ${money(s.fees)} fees` : ''}`} />
         <StatCard label="Inventory at market" value={money(s.inventory.market)} sub={`${s.inventory.count} cards · cost ${money(s.inventory.cost)}`} />
         <StatCard label="Unrealized gain" value={money(s.inventory.unrealized)} tone={tone(s.inventory.unrealized)} sub={pct(s.inventory.unrealizedPct)} />
@@ -49,10 +50,20 @@ export default function Dashboard() {
 
       <WalletsPanel wallets={s.wallets} onChange={load} />
 
+      <div className="panel">
+        <div className="panel-head"><h2>Performance by game</h2><span className="hint">trades count at their trade value</span></div>
+        <GamePerformance games={s.games} binder={s.binderStats} misc={s.miscStats} />
+      </div>
+
       <div className="grid two-col">
         <div className="panel">
           <div className="panel-head"><h2>Profit by month</h2><span className="hint">by sale date</span></div>
-          <MonthlyChart months={s.monthly} />
+          <div className="chips" role="group" aria-label="Show profit for">
+            {['All', ...GAMES, 'Binder', 'Sealed & misc'].map((c) => (
+              <button key={c} type="button" className={`chip${chartCat === c ? ' on' : ''}`} aria-pressed={chartCat === c} onClick={() => setChartCat(c)}>{c}</button>
+            ))}
+          </div>
+          <MonthlyChart months={s.monthly} category={chartCat} />
         </div>
         <div className="panel">
           <div className="panel-head"><h2>Recent sales</h2><Link to="/inventory?view=sold" className="hint">See all</Link></div>
@@ -70,25 +81,6 @@ export default function Dashboard() {
 
       <div className="grid two-col">
         <div className="panel">
-          <div className="panel-head"><h2>By game</h2></div>
-          <table className="simple">
-            <thead>
-              <tr><th>Game</th><th className="num">In stock</th><th className="num">Cost</th><th className="num">Market</th><th className="num">Realized</th></tr>
-            </thead>
-            <tbody>
-              {s.byGame.map((g) => (
-                <tr key={g.game}>
-                  <td>{g.game}</td>
-                  <td className="num">{g.inStock}</td>
-                  <td className="num">{money(g.cost)}</td>
-                  <td className="num">{money(g.market)}</td>
-                  <td className={`num ${tone(g.profit)}`}>{money(g.profit)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="panel">
           <div className="panel-head"><h2>Movers in inventory</h2></div>
           {s.topGainers.length === 0 && <p className="hint">Add cards to see which are up or down.</p>}
           {[...s.topGainers, ...s.topLosers.filter((l) => !s.topGainers.some((g) => g.id === l.id))].map((m) => (
@@ -97,7 +89,9 @@ export default function Dashboard() {
               <span className={tone(m.roiPct)}>{pct(m.roiPct)}</span>
             </div>
           ))}
-          <div className="panel-head" style={{ marginTop: 14 }}><h3>Revenue by payment method</h3></div>
+        </div>
+        <div className="panel">
+          <div className="panel-head"><h2>Revenue by payment method</h2><span className="hint">Trade = value of cards traded away</span></div>
           {s.byMethod.map((m) => (
             <div className="list-row" key={m.method}><span>{m.method}</span><span>{money(m.revenue)}</span></div>
           ))}

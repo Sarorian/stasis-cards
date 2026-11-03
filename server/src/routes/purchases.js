@@ -102,6 +102,10 @@ r.patch('/:id', ah(async (req, res) => {
 r.delete('/:id', ah(async (req, res) => {
   const p = await Purchase.findById(req.params.id);
   if (!p) throw new HttpError(404, 'Purchase not found.');
+  const traded = await Card.countDocuments({ purchase: p._id, 'sale.trade': { $exists: true, $ne: null } });
+  if (traded) throw new HttpError(409, `${traded} card(s) from this purchase left in a trade. Undo the trade first.`);
+  const cleansed = await Card.countDocuments({ purchase: p._id, 'sale.debt': { $exists: true, $ne: null } });
+  if (cleansed) throw new HttpError(409, `${cleansed} card(s) from this purchase were taken to cleanse debt. Undo that on the Debt page first.`);
   const sold = await Card.countDocuments({ purchase: p._id, status: 'sold' });
   if (sold && req.query.force !== 'true') {
     throw new HttpError(409, `${sold} card(s) from this purchase were already sold. Add ?force=true to delete anyway.`);

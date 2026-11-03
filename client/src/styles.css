@@ -142,6 +142,27 @@ input[type='checkbox'] { width: auto; }
 .card-entry .thumb { width: 56px; height: 78px; border-radius: 5px; object-fit: cover; background: var(--surface-2); }
 .card-entry .thumb.logo { object-fit: contain; padding: 6px; }
 .lookup-status { font-size: 12px; color: var(--muted); }
+.find-row { grid-template-columns: minmax(110px, 0.8fr) minmax(0, 3fr) auto; }
+
+/* "Find card" results */
+.results { margin-top: 8px; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.results-head, .results-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; font-size: 13px; color: var(--muted); }
+.results-head { border-bottom: 1px solid var(--border); }
+.results-foot { border-top: 1px solid var(--border); justify-content: flex-start; }
+.results-filter { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; padding: 8px 10px; }
+.results-list { max-height: 360px; overflow-y: auto; }
+.result {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%;
+  padding: 6px 10px; border: 0; border-radius: 0; border-bottom: 1px solid var(--border); background: transparent;
+  text-align: left; white-space: normal;
+}
+.result:last-child { border-bottom: 0; }
+.result:hover, .result:focus-visible { background: var(--accent-bg); outline: none; }
+.result-img { width: 36px; height: 50px; object-fit: cover; border-radius: 3px; background: var(--surface-2); display: block; }
+.result-img.logo { object-fit: contain; padding: 3px; }
+.result-main { display: flex; flex-direction: column; min-width: 0; }
+.result-name { font-weight: 600; font-size: 14px; }
+.result-price { font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* ---------- charts ---------- */
 .bar-row { display: grid; grid-template-columns: 38px 1fr 84px; gap: 8px; align-items: center; font-size: 13px; margin: 5px 0; }
@@ -170,4 +191,101 @@ table.simple td.num, table.simple th.num { text-align: right; }
   .inv-row .row-actions { grid-column: 1 / -1; justify-content: flex-start; }
   .card-img { width: 56px; height: 78px; }
   .form-row { grid-template-columns: 1fr 1fr !important; }
+  .form-row.find-row { grid-template-columns: 1fr auto !important; }
+  .form-row.find-row > label:first-child { grid-column: 1 / -1; }
 }
+
+/* ---------- trade ---------- */
+.trade-cols { align-items: start; }
+.trade-cols > .panel { margin-bottom: 0; }
+.trade-total { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.panel-head h2 .faint { font-weight: 400; margin-left: 4px; }
+.trade-line { display: grid; grid-template-columns: 36px minmax(0, 1fr) 120px auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.trade-line:first-of-type { margin-top: 8px; }
+.trade-line-main { min-width: 0; }
+.trade-value { gap: 2px; }
+.their-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-bottom: 10px; background: var(--bg); }
+.their-card-head { display: flex; gap: 10px; align-items: flex-start; }
+.their-card-head .result-img { margin-top: 18px; }
+.binder-line { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+.settle { margin-top: 14px; }
+.settle-math { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; font-size: 15px; }
+.settle-result { font-size: 20px; font-weight: 700; margin-left: auto; }
+.settle-result.in { color: var(--pos); }
+.settle-result.out { color: var(--neg); }
+.settle-note { margin-top: 8px; }
+.settle-note.neg { color: var(--neg); }
+button.linkish { border: 0; background: none; padding: 0; color: var(--accent); font-size: 12px; text-decoration: underline; cursor: pointer; display: inline; }
+button.linkish:hover { background: none; }
+@media (max-width: 720px) {
+  .trade-line { grid-template-columns: 36px minmax(0, 1fr) auto; }
+  .trade-line .trade-value { grid-column: 2 / -1; }
+  .settle-result { margin-left: 0; width: 100%; }
+}
+
+/* ---------- performance by game ---------- */
+.perf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; align-items: start; }
+.perf-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--bg); min-width: 0; }
+.perf-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.perf-head h3 { margin-right: auto; }
+.perf-logo { width: 22px; height: 22px; object-fit: contain; border-radius: 4px; }
+.binder-mark { display: grid; place-items: center; background: var(--pro-bg); color: var(--pro); font-size: 12px; font-weight: 700; }
+.perf-big { display: flex; flex-direction: column; margin-bottom: 8px; }
+.perf-big .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.perf-row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 4px 0; border-top: 1px solid var(--border); }
+.perf-row > span:first-child { color: var(--muted); white-space: nowrap; }
+.perf-row > span:last-child { text-align: right; min-width: 0; font-variant-numeric: tabular-nums; }
+.perf-flip { display: inline-block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; color: var(--muted); }
+.perf-compare { margin: 4px 0 10px; font-size: 13px; }
+.perf-compare-row { display: grid; grid-template-columns: 58px 1fr 56px; gap: 8px; align-items: center; margin: 3px 0; }
+.perf-compare-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.bar.neutral { background: var(--faint); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+button.chip { padding: 3px 10px; font-size: 12px; border-radius: 999px; }
+button.chip.on { background: var(--accent-bg); color: var(--accent); border-color: transparent; font-weight: 600; }
+
+/* ---------- misc (sealed & other items) ---------- */
+.misc-form { grid-template-columns: minmax(140px, 1fr) 2.2fr 1fr 0.7fr 0.8fr 1fr 1fr auto; }
+.misc-sell { grid-template-columns: minmax(140px, 1fr) 0.9fr 1fr 0.8fr 1fr auto auto; }
+.misc-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.misc-row:last-child { border-bottom: 0; }
+.misc-main { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; }
+.misc-main .perf-logo { align-self: start; margin-top: 2px; }
+.misc-progress { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.misc-progress .progress { width: 140px; margin: 0; flex: none; }
+.misc-left { color: var(--text); }
+.misc-money { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.misc-row .inline-form { margin-top: 10px; }
+.misc-mark { background: var(--warn-bg); color: var(--warn); }
+@media (max-width: 720px) {
+  .misc-main { grid-template-columns: 26px minmax(0, 1fr); }
+  .misc-money { grid-column: 2; text-align: left; }
+  .misc-main .row-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* ---------- split payments ---------- */
+.sell-row { grid-template-columns: minmax(140px, 1fr) 0.9fr minmax(240px, 1.6fr) 0.7fr auto auto; }
+.split-label { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.split-box { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); min-width: 0; }
+.split-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.split-rest { background: var(--surface-2); color: var(--muted); }
+@media (max-width: 720px) { .form-row .split-box { grid-column: 1 / -1; } }
+
+/* ---------- debt ---------- */
+.debt-total { display: flex; align-items: baseline; gap: 8px; }
+.debt-total b { font-size: 22px; }
+.debt-cols { align-items: start; }
+.debt-cols > .panel { margin-bottom: 0; }
+.debt-owed { display: flex; align-items: baseline; justify-content: space-between; background: var(--neg-bg); border-radius: var(--radius); padding: 10px 12px; }
+.debt-owed .value { font-size: 24px; font-weight: 700; color: var(--neg); font-variant-numeric: tabular-nums; }
+.debt-form { margin-bottom: 12px; }
+.debt-ledger { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 6px; }
+.debt-col-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--border-strong); }
+.debt-line { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.debt-amt { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.debt-src { display: flex; flex-direction: column; min-width: 0; }
+.debt-source { overflow-wrap: anywhere; font-style: italic; }
+.debt-line button { padding: 2px 6px; }
+a.stat-link { color: inherit; text-decoration: none; display: block; }
+a.stat-link .stat:hover { border-color: var(--border-strong); }
+@media (max-width: 720px) { .debt-ledger { grid-template-columns: 1fr; } }

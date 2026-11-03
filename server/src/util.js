@@ -28,6 +28,37 @@ export function checkWallet(w) {
   return w;
 }
 
+/*
+  Who paid what, into which wallet. Accepts either
+    { payments: [{ method, amount }, ...] }   (split, e.g. $200 Cash + $100 Venmowen)
+    { method }                                (all of `total` into one wallet)
+  Same wallet twice is merged. The amounts must add up to `total`.
+*/
+export function parsePayments(body, total, label = 'payment') {
+  const t = round2(total);
+  let list;
+  if (Array.isArray(body.payments) && body.payments.length) {
+    const merged = new Map();
+    for (const p of body.payments) {
+      const method = checkWallet(p.method);
+      const amount = positive(p.amount, `${method} ${label} amount`);
+      merged.set(method, round2((merged.get(method) || 0) + amount));
+    }
+    list = [...merged].map(([method, amount]) => ({ method, amount }));
+    const sum = round2(list.reduce((a, p) => a + p.amount, 0));
+    if (Math.abs(sum - t) > 0.004) {
+      throw new HttpError(400, `The split adds up to $${sum.toFixed(2)} but should be $${t.toFixed(2)}.`);
+    }
+  } else {
+    list = [{ method: checkWallet(body.method), amount: t }];
+  }
+  // Biggest share first: it's the "main" method shown in short labels, and takes any fees
+  return list.sort((a, b) => b.amount - a.amount);
+}
+
+export const paymentLabel = (payments, fallback) =>
+  payments?.length ? payments.map((p) => p.method).join(' + ') : fallback || '';
+
 export async function walletBalances() {
   const rows = await Transaction.aggregate([{ $group: { _id: '$wallet', total: { $sum: '$amount' } } }]);
   const balances = Object.fromEntries(WALLETS.map((w) => [w, 0]));

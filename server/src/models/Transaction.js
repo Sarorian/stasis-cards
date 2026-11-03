@@ -9,12 +9,16 @@ const transactionSchema = new mongoose.Schema(
     amount: { type: Number, required: true }, // + money in, - money out
     kind: {
       type: String,
-      enum: ['capital', 'purchase', 'sale', 'binder_buy', 'binder_sell', 'transfer', 'adjustment'],
+      enum: ['capital', 'purchase', 'sale', 'binder_buy', 'binder_sell', 'transfer', 'adjustment', 'trade', 'misc_buy', 'misc_sell', 'debt_loan', 'debt_clean'],
       required: true,
     },
     card: { type: mongoose.Schema.Types.ObjectId, ref: 'Card' },
     purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' },
     binderEntry: { type: mongoose.Schema.Types.ObjectId, ref: 'BinderEntry' },
+    trade: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
+    miscItem: { type: mongoose.Schema.Types.ObjectId, ref: 'MiscItem' },
+    miscEntry: { type: mongoose.Schema.Types.ObjectId, ref: 'MiscEntry' },
+    debtEntry: { type: mongoose.Schema.Types.ObjectId, ref: 'DebtEntry' },
     transferId: { type: String },
     note: { type: String, default: '' },
   },

@@ -11,7 +11,10 @@ import wallets from './routes/wallets.js';
 import stats from './routes/stats.js';
 import prices from './routes/prices.js';
 import admin from './routes/admin.js';
-import { GAMES, WALLETS, CONDITIONS, GRADERS } from './constants.js';
+import trades from './routes/trades.js';
+import misc from './routes/misc.js';
+import debt from './routes/debt.js';
+import { GAMES, WALLETS, CONDITIONS, GRADERS, PARTNERS } from './constants.js';
 
 for (const key of ['MONGODB_URI', 'APP_PASSWORD', 'JWT_SECRET']) {
   if (!process.env[key]) {
@@ -33,7 +36,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.post('/api/auth/login', login);
 
 app.use('/api', requireAuth);
-app.get('/api/meta', (req, res) => res.json({ games: GAMES, wallets: WALLETS, conditions: CONDITIONS, graders: GRADERS }));
+app.get('/api/meta', (req, res) => res.json({ games: GAMES, wallets: WALLETS, conditions: CONDITIONS, graders: GRADERS, partners: PARTNERS }));
 app.use('/api/cards', cards);
 app.use('/api/purchases', purchases);
 app.use('/api/binder', binder);
@@ -41,6 +44,9 @@ app.use('/api/wallets', wallets);
 app.use('/api/stats', stats);
 app.use('/api/prices', prices);
 app.use('/api/admin', admin);
+app.use('/api/trades', trades);
+app.use('/api/misc', misc);
+app.use('/api/debt', debt);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 

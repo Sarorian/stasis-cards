@@ -25,6 +25,8 @@ const cardSchema = new mongoose.Schema(
     imageUrl: { type: String, default: '' },
 
     purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' },
+    // Set when this card came in through a trade
+    tradeIn: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
     boughtDate: { ...dateStr, required: true },
     cost: { type: Number, required: true, min: 0 },
     marketAtPurchase: { type: Number, required: true, min: 0 },
@@ -42,6 +44,7 @@ const cardSchema = new mongoose.Schema(
       tcgapiId: String,
       tcgapiPrinting: String,
       pokemontcgId: String,
+      pokemontcgVariant: String,
       pricechartingId: String,
     },
 
@@ -50,7 +53,14 @@ const cardSchema = new mongoose.Schema(
       date: dateStr,
       price: Number,
       fees: { type: Number, default: 0 },
-      method: { type: String, enum: [...WALLETS, null], default: null },
+      method: { type: String, enum: [...WALLETS, null], default: null }, // biggest share when split
+      // Split payments, e.g. [{ Cash, 200 }, { Venmowen, 100 }]. Empty = all to `method`.
+      payments: [{ _id: false, method: { type: String, enum: WALLETS }, amount: Number }],
+      // Set when this card left in a trade (no wallet: sale.price is the trade value)
+      trade: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
+      // Set when a partner took this card to cleanse debt (sale.price is the cleansed value)
+      debt: { type: mongoose.Schema.Types.ObjectId, ref: 'DebtEntry' },
+      cleansedBy: { type: String, default: null },
     },
     notes: { type: String, default: '' },
   },

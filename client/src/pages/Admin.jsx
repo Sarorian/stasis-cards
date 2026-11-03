@@ -4,7 +4,7 @@ import { WALLETS, money, fmtDate } from '../format.js';
 
 const KIND_LABEL = {
   capital: 'Capital', purchase: 'Purchase', sale: 'Sale', binder_buy: 'Binder buy',
-  binder_sell: 'Binder sale', transfer: 'Transfer', adjustment: 'Correction',
+  binder_sell: 'Binder sale', transfer: 'Transfer', adjustment: 'Correction', trade: 'Trade', misc_buy: 'Misc buy', misc_sell: 'Misc sale', debt_loan: 'Debt (loan in)', debt_clean: 'Debt cleanse',
 };
 
 export default function Admin() {
@@ -82,7 +82,7 @@ function CapitalForm({ data, onSaved }) {
     <form className="panel" onSubmit={submit}>
       <div className="panel-head">
         <h2>Starting capital</h2>
-        <span className="hint">ROI is measured against this · currently {money(data.startingCapital)}</span>
+        <span className="hint">The money you started with · currently {money(data.startingCapital)}</span>
       </div>
       <div className="form-row" style={{ gridTemplateColumns: '1fr 1.2fr 2fr auto' }}>
         <label className="field">Amount

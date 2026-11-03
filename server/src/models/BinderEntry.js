@@ -9,7 +9,9 @@ const binderEntrySchema = new mongoose.Schema(
     date: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
     count: { type: Number, required: true, min: 1 },
     amount: { type: Number, required: true, min: 0 },
-    method: { type: String, enum: WALLETS, required: true },
+    // 'Trade' = binder cards traded in or out; no wallet moved
+    method: { type: String, enum: [...WALLETS, 'Trade'], required: true },
+    trade: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
     // For sells: cost basis removed from the pool
     costBasis: { type: Number, default: 0 },
     notes: { type: String, default: '' },

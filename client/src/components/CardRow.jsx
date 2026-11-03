@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { money, pct, tone, fmtDate, fmtTime, roiPct, checkLinks } from '../format.js';
 import CardImage from './CardImage.jsx';
 import SellForm from './SellForm.jsx';
+import CleanseForm from './CleanseForm.jsx';
 
 export default function CardRow({ card, onChange }) {
   const [mode, setMode] = useState(null); // 'sell' | 'price' | null
@@ -11,6 +12,9 @@ export default function CardRow({ card, onChange }) {
   const [priceInput, setPriceInput] = useState('');
 
   const sold = card.status === 'sold';
+  const tradedAway = sold && Boolean(card.sale?.trade);
+  const cleansed = sold && Boolean(card.sale?.debt);
+  const inTrade = tradedAway || Boolean(card.tradeIn) || cleansed;
   const graded = card.graded?.company;
   const market = card.market?.price || 0;
   const value = sold ? card.sale.price - (card.sale.fees || 0) : market;
@@ -61,13 +65,13 @@ export default function CardRow({ card, onChange }) {
         </div>
         <div className="col-hide">
           {money(card.cost)}
-          <div className="faint">{fmtDate(card.boughtDate)} · {card.pctOfMarket}% of mkt</div>
+          <div className="faint">{card.tradeIn ? 'traded in ' : ''}{fmtDate(card.boughtDate)} · {card.pctOfMarket}% of mkt</div>
         </div>
         <div className="col-hide">
           {sold ? (
             <>
               {money(card.sale.price)}
-              <div className="faint">sold {fmtDate(card.sale.date)} · {card.sale.method}</div>
+              <div className="faint">{cleansed ? `taken by ${card.sale.cleansedBy} (debt)` : tradedAway ? 'traded' : 'sold'} {fmtDate(card.sale.date)}{cleansed ? '' : ` · ${card.sale.payments?.length ? card.sale.payments.map((p) => `${money(p.amount)} ${p.method}`).join(' + ') : card.sale.method || 'Trade'}`}</div>
             </>
           ) : (
             <>
@@ -81,20 +85,26 @@ export default function CardRow({ card, onChange }) {
           <div className={`faint ${tone(value - card.cost)}`}>{money(value - card.cost)}</div>
         </div>
         <div className="row-actions">
-          {sold ? (
-            <button className="small" disabled={busy} onClick={() => act(() => api.unsellCard(card._id), `Undo the sale of ${card.name}? The money comes back out of ${card.sale.method}.`)}>Undo sale</button>
+          {cleansed ? (
+            <span className="faint" title="Undo it on the Debt page">debt cleanse</span>
+          ) : tradedAway ? (
+            <span className="faint" title="Undo it from Trade → History">in a trade</span>
+          ) : sold ? (
+            <button className="small" disabled={busy} onClick={() => act(() => api.unsellCard(card._id), `Undo the sale of ${card.name}? The money comes back out of ${card.sale.payments?.length ? card.sale.payments.map((p) => p.method).join(' and ') : card.sale.method}.`)}>Undo sale</button>
           ) : (
             <>
               <button className="small primary" onClick={() => setMode(mode === 'sell' ? null : 'sell')}>Sell</button>
+              <button className="small" title="Owen or Ben takes this card to cleanse debt" onClick={() => setMode(mode === 'cleanse' ? null : 'cleanse')}>Cleanse</button>
               <button className="small ghost" title="Refresh this card's price and image" disabled={busy} onClick={() => act(() => api.refreshCard(card._id))}>{busy ? '…' : '↻'}</button>
               <button className="small ghost" title="Set price manually" onClick={() => { setPriceInput(market || ''); setMode(mode === 'price' ? null : 'price'); }}>$</button>
             </>
           )}
-          <button className="small ghost danger" title="Delete card" disabled={busy}
-            onClick={() => act(() => api.deleteCard(card._id), `Delete ${card.name}? This removes it from inventory${sold ? ' and removes its sale money' : ''}. The purchase payment stays recorded.`)}>✕</button>
+          {!inTrade && <button className="small ghost danger" title="Delete card" disabled={busy}
+            onClick={() => act(() => api.deleteCard(card._id), `Delete ${card.name}? This removes it from inventory${sold ? ' and removes its sale money' : ''}. The purchase payment stays recorded.`)}>✕</button>}
         </div>
         {msg && <div className="error" style={{ gridColumn: '1 / -1', marginTop: 0 }}>{msg}</div>}
         {mode === 'sell' && <SellForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
+        {mode === 'cleanse' && <CleanseForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
         {mode === 'price' && (
           <form className="inline-form" onSubmit={savePrice}>
             <div className="form-row" style={{ gridTemplateColumns: '1fr auto auto auto' }}>

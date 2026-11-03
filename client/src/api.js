@@ -60,8 +60,26 @@ export const api = {
   transfer: (body) => request('POST', '/wallets/transfer', body),
 
   lookup: (params) => request('GET', '/prices/lookup' + qs(params)),
+  searchCards: (params) => request('GET', '/prices/search' + qs(params)),
+  gradedPrice: (params) => request('GET', '/prices/graded' + qs(params)),
   startPriceUpdate: () => request('POST', '/prices/update'),
   priceStatus: () => request('GET', '/prices/status'),
+
+  trades: () => request('GET', '/trades'),
+  createTrade: (body) => request('POST', '/trades', body),
+  deleteTrade: (id) => request('DELETE', `/trades/${id}`),
+
+  miscItems: () => request('GET', '/misc'),
+  createMiscItem: (body) => request('POST', '/misc', body),
+  updateMiscItem: (id, body) => request('PATCH', `/misc/${id}`, body),
+  deleteMiscItem: (id) => request('DELETE', `/misc/${id}`),
+  sellMisc: (id, body) => request('POST', `/misc/${id}/sell`, body),
+  openMisc: (id, body) => request('POST', `/misc/${id}/open`, body),
+  deleteMiscEntry: (entryId) => request('DELETE', `/misc/entries/${entryId}`),
+
+  debt: () => request('GET', '/debt'),
+  addDebt: (body) => request('POST', '/debt', body),
+  deleteDebt: (id) => request('DELETE', `/debt/${id}`),
 
   admin: () => request('GET', '/admin'),
   setCapital: (body) => request('PUT', '/admin/capital', body),
