@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 168" role="img" aria-label="Pokémon placeholder">
+  <!-- Placeholder: replace this file with the game's logo (same file name). -->
+  <rect x="2" y="2" width="116" height="164" rx="10" fill="#f4f2ec" stroke="#E8B931" stroke-width="4"/>
+  <rect x="14" y="14" width="92" height="140" rx="6" fill="none" stroke="#E8B931" stroke-opacity="0.35" stroke-width="2"/>
+  <circle cx="60" cy="70" r="20" fill="none" stroke="#E8B931" stroke-width="4"/>
+  <text x="60" y="120" text-anchor="middle" font-family="system-ui, sans-serif" font-size="15" font-weight="700" fill="#E8B931">Pokémon</text>
+</svg>
