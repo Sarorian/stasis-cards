@@ -50,6 +50,7 @@ export default function PriceUpdateButton({ lastUpdated, onDone }) {
         <div className="faint" style={{ marginTop: 4 }}>
           Updated {status.updated} of {status.total}
           {status.notFound.length > 0 && ` · ${status.notFound.length} not found`}
+          {status.skippedForManual > 0 && ` · ${status.skippedForManual} priced by hand`}
           {status.failed.length > 0 && ` · ${status.failed.length} failed`}
           {status.quotaRemaining !== null && status.quotaRemaining !== undefined && ` · ${status.quotaRemaining} lookups left today`}
         </div>

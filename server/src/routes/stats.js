@@ -119,6 +119,30 @@ r.get('/', ah(async (req, res) => {
     };
   });
 
+  // ---- Year 2: day by day since the start date (sales + binder + sealed, minus expenses) ----
+  const sinceStart = (() => {
+    const start = settings.startDate;
+    if (!start) return null;
+    const end = today();
+    const byDay = new Map();
+    const add = (date, revenue, profit) => {
+      if (!date || date < start || date > end) return;
+      const d = byDay.get(date) || { revenue: 0, profit: 0 };
+      d.revenue += revenue;
+      d.profit += profit;
+      byDay.set(date, d);
+    };
+    sales.forEach((s) => add(s.date, s.revenue, s.profit));
+    expenseEntries.forEach((e) => add(e.date, 0, -e.amount));
+    const days = [];
+    for (let t = new Date(`${start}T12:00:00Z`); t.toISOString().slice(0, 10) <= end; t = new Date(t.getTime() + 864e5)) {
+      const date = t.toISOString().slice(0, 10);
+      const d = byDay.get(date) || { revenue: 0, profit: 0 };
+      days.push({ date, revenue: round2(d.revenue), profit: round2(d.profit) });
+    }
+    return { start, days };
+  })();
+
   // ---- Performance per game ----
   const games = GAMES.map((g) => {
     const all = cards.filter((c) => c.game === g);
@@ -242,6 +266,7 @@ r.get('/', ah(async (req, res) => {
   res.json({
     startingCapital: capital,
     startDate: settings.startDate,
+    sinceStart,
     yearOne: settings.yearOne,
     openingCards: inStock.filter((c) => c.opening).length,
     // ROI = what we've made (realized + unrealized) vs everything we've spent on cards and binder lots

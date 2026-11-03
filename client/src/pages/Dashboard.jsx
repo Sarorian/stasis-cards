@@ -8,12 +8,20 @@ import MonthlyChart from '../components/MonthlyChart.jsx';
 import WalletsPanel from '../components/WalletsPanel.jsx';
 import GamePerformance from '../components/GamePerformance.jsx';
 import { YearOneFigures } from './Setup.jsx';
+import RevenueProfitChart from '../components/RevenueProfitChart.jsx';
+import ManualPrices from '../components/ManualPrices.jsx';
 import { GAMES } from '../format.js';
 
 export default function Dashboard() {
   const [s, setS] = useState(null);
   const [error, setError] = useState('');
   const [chartCat, setChartCat] = useState('All');
+  const [showManual, setShowManual] = useState(false);
+  const [manualWaiting, setManualWaiting] = useState(0);
+  const loadManualCount = useCallback(() => {
+    api.manualPrices().then((l) => setManualWaiting(l.filter((c) => c.needed).length)).catch(() => {});
+  }, []);
+  useEffect(loadManualCount, [loadManualCount]);
 
   const load = useCallback(() => {
     api.stats().then(setS).catch((e) => setError(e.message));
@@ -32,7 +40,12 @@ export default function Dashboard() {
             ? <span className="hint">Tracking since {fmtDate(s.startDate)}{s.openingCards ? ` · ${s.openingCards} starting-inventory cards` : ''}</span>
             : <Link to="/setup" className="hint">Moving from the old system? Do the starting setup</Link>}
         </div>
-        <PriceUpdateButton lastUpdated={s.pricesUpdatedAt} onDone={load} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <PriceUpdateButton lastUpdated={s.pricesUpdatedAt} onDone={() => { load(); loadManualCount(); setShowManual(true); }} />
+          <button className="small" onClick={() => setShowManual(!showManual)} aria-expanded={showManual}>
+            Prices to enter{manualWaiting ? ` (${manualWaiting})` : ''}
+          </button>
+        </div>
       </div>
 
       <div className="grid stats">
@@ -54,7 +67,21 @@ export default function Dashboard() {
         <StatCard label="Worst flip" value={s.worstFlip ? money(s.worstFlip.profit) : '—'} tone={tone(s.worstFlip?.profit)} sub={s.worstFlip?.name} />
       </div>
 
+      {showManual && <ManualPrices onSaved={() => { load(); loadManualCount(); }} onClose={() => setShowManual(false)} />}
+
       <WalletsPanel wallets={s.wallets} onChange={load} />
+
+      {s.sinceStart && (
+        <div className="panel">
+          <div className="panel-head">
+            <h2>Year 2 so far</h2>
+            <span className="hint">
+              {money(s.sinceStart.days.reduce((a, d) => a + d.revenue, 0))} revenue · {money(s.sinceStart.days.reduce((a, d) => a + d.profit, 0))} profit (after expenses)
+            </span>
+          </div>
+          <RevenueProfitChart days={s.sinceStart.days} />
+        </div>
+      )}
 
       <div className="panel">
         <div className="panel-head"><h2>Performance by game</h2><span className="hint">trades count at their trade value</span></div>

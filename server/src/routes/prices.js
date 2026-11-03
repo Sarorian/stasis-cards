@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { ah, HttpError } from '../util.js';
 import { GAMES } from '../constants.js';
-import { lookup, startUpdateAll, jobStatus } from '../prices/index.js';
+import { lookup, startUpdateAll, jobStatus, manualReason } from '../prices/index.js';
+import Card from '../models/Card.js';
+import { round2, today } from '../constants.js';
 import { checkLinks, searchCards, pricecharting, QuotaError } from '../prices/providers.js';
 
 const r = Router();
@@ -55,5 +57,47 @@ r.get('/links', (req, res) => {
 r.post('/update', (req, res) => res.status(202).json(startUpdateAll()));
 
 r.get('/status', (req, res) => res.json(jobStatus()));
+
+// Cards that need a price typed in by hand (graded, Japanese non-Pokemon, or not found)
+r.get('/manual', ah(async (req, res) => {
+  const cards = await Card.find({ status: 'in_stock' }).select('-priceHistory').lean();
+  const list = cards
+    .map((c) => ({ c, reason: manualReason(c) }))
+    .filter((x) => x.reason)
+    .map(({ c, reason }) => ({
+      id: c._id, name: c.name, number: c.number, setName: c.setName, game: c.game, language: c.language || 'EN',
+      graded: c.graded?.company ? c.graded : null, condition: c.condition, imageUrl: c.imageUrl, cost: c.cost,
+      price: c.market?.price || 0, manual: Boolean(c.market?.manualOverride), updatedAt: c.market?.updatedAt || null, reason,
+      // Still waiting on a price (graded/Japanese cards you've already priced by hand are listed, but not counted)
+      needed: reason === 'notFound' || !c.market?.manualOverride,
+    }))
+    // Oldest prices first
+    .sort((a, b) => new Date(a.updatedAt || 0) - new Date(b.updatedAt || 0));
+  res.json(list);
+}));
+
+// Save hand-entered prices: { prices: [{ id, price }] }. Each becomes a manual price.
+r.post('/manual', ah(async (req, res) => {
+  const list = Array.isArray(req.body?.prices) ? req.body.prices : [];
+  let saved = 0;
+  for (const p of list) {
+    const price = Number(p.price);
+    if (!(price > 0)) continue;
+    const card = await Card.findById(p.id);
+    if (!card || card.status !== 'in_stock') continue;
+    card.market.price = round2(price);
+    card.market.manualOverride = true;
+    card.market.lookupFailed = false;
+    card.market.updatedAt = new Date();
+    card.market.sources = [{ source: 'Manual', price: card.market.price }];
+    const d = today();
+    const last = card.priceHistory[card.priceHistory.length - 1];
+    if (last?.date === d) last.price = card.market.price;
+    else card.priceHistory.push({ date: d, price: card.market.price });
+    await card.save();
+    saved++;
+  }
+  res.json({ saved });
+}));
 
 export default r;

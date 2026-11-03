@@ -68,6 +68,7 @@ export async function refreshCard(card, { force = false } = {}) {
   if (res.imageUrl && !card.imageUrl) card.imageUrl = res.imageUrl;
   if (res.setName && !card.setName) card.setName = res.setName;
   card.external = { ...(card.external?.toObject ? card.external.toObject() : card.external), ...res.external };
+  card.market.lookupFailed = !res.price;
   if (res.price) {
     card.market.price = round2(res.price);
     card.market.sources = res.sources;
@@ -104,7 +105,7 @@ export function startUpdateAll() {
   if (job.running) return jobStatus();
   Object.assign(job, {
     running: true, startedAt: new Date(), finishedAt: null, total: 0, done: 0, updated: 0,
-    notFound: [], failed: [], stoppedReason: null,
+    notFound: [], failed: [], stoppedReason: null, skippedForManual: 0,
   });
   tcgapiState.remaining = null; // re-read from the next response
   run().catch((err) => {
@@ -115,20 +116,34 @@ export function startUpdateAll() {
   return jobStatus();
 }
 
+/*
+  Cards whose price has to be typed in by hand:
+    graded   - graded cards (unless PriceCharting is set up, which prices them automatically)
+    japanese - Japanese cards other than Pokemon (no price source)
+    notFound - the last automatic lookup found nothing
+*/
+export function manualReason(card) {
+  if (card.graded?.company && !process.env.PRICECHARTING_TOKEN) return 'graded';
+  if (card.language === 'JP' && card.game !== 'Pokemon') return 'japanese';
+  if (card.market?.lookupFailed && !card.market?.manualOverride) return 'notFound';
+  return null;
+}
+
 async function run() {
-  // Oldest prices first so a quota stop still refreshes the stalest cards
-  // Japanese cards other than Pokemon have no price source, so they're skipped (set their price with $)
-  const cards = await Card.find({
-    status: 'in_stock',
-    'market.manualOverride': { $ne: true },
-    $nor: [{ language: 'JP', game: { $ne: 'Pokemon' } }],
-  }).sort({ 'market.updatedAt': 1 });
+  // Oldest prices first so a quota stop still refreshes the stalest cards.
+  // Graded and Japanese non-Pokemon cards are skipped: they go to "Prices to enter" instead.
+  const all = await Card.find({ status: 'in_stock', 'market.manualOverride': { $ne: true } }).sort({ 'market.updatedAt': 1 });
+  const cards = all.filter((c) => {
+    const why = manualReason(c);
+    return why !== 'graded' && why !== 'japanese';
+  });
+  job.skippedForManual = all.length - cards.length;
   job.total = cards.length;
   for (const card of cards) {
     try {
       const r = await refreshCard(card);
       if (r.price) job.updated++;
-      else job.notFound.push(`${card.name} ${card.number}`.trim());
+      else job.notFound.push({ id: String(card._id), name: `${card.name} ${card.number}`.trim() });
       if (r.quotaHit) {
         job.stoppedReason = 'Daily price lookup limit reached. The rest will update tomorrow; run it again then.';
         job.done++;

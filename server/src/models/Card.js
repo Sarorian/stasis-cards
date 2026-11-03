@@ -48,6 +48,8 @@ const cardSchema = new mongoose.Schema(
       sources: [priceSourceSchema],
       updatedAt: Date,
       manualOverride: { type: Boolean, default: false },
+      // The last automatic lookup found no price (shows up in "Prices to enter")
+      lookupFailed: { type: Boolean, default: false },
     },
     priceHistory: [{ _id: false, date: String, price: Number }],
     external: {

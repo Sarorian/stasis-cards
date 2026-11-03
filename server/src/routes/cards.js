@@ -4,7 +4,7 @@ import Transaction from '../models/Transaction.js';
 import Purchase from '../models/Purchase.js';
 import { ah, HttpError, positive, parsePayments, checkWallet } from '../util.js';
 import { today, round2, GAMES, CONDITIONS, GRADERS } from '../constants.js';
-import { refreshCard } from '../prices/index.js';
+import { refreshCard, manualReason } from '../prices/index.js';
 
 const r = Router();
 
@@ -193,6 +193,10 @@ r.post('/:id/refresh', ah(async (req, res) => {
   const card = await Card.findById(req.params.id);
   if (!card) throw new HttpError(404, 'Card not found.');
   if (card.status !== 'in_stock') throw new HttpError(400, `${card.name} isn't in stock, so its price isn't updated.`);
+  const why = manualReason(card);
+  if (why === 'graded' || why === 'japanese') {
+    throw new HttpError(400, `${why === 'graded' ? 'Graded' : 'Japanese ' + card.game} cards are priced by hand. Use the $ button or "Prices to enter" on the Dashboard.`);
+  }
   const result = await refreshCard(card, { force: true });
   res.json({ card, result });
 }));

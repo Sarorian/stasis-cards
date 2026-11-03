@@ -66,6 +66,8 @@ export const api = {
   gradedPrice: (params) => request('GET', '/prices/graded' + qs(params)),
   startPriceUpdate: () => request('POST', '/prices/update'),
   priceStatus: () => request('GET', '/prices/status'),
+  manualPrices: () => request('GET', '/prices/manual'),
+  saveManualPrices: (prices) => request('POST', '/prices/manual', { prices }),
 
   trades: () => request('GET', '/trades'),
   createTrade: (body) => request('POST', '/trades', body),
