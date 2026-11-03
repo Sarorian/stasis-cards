@@ -4,6 +4,7 @@ import { money, pct, tone, fmtDate, fmtTime, roiPct, checkLinks } from '../forma
 import CardImage from './CardImage.jsx';
 import SellForm from './SellForm.jsx';
 import CleanseForm from './CleanseForm.jsx';
+import EditCardForm from './EditCardForm.jsx';
 
 export default function CardRow({ card, onChange }) {
   const [mode, setMode] = useState(null); // 'sell' | 'price' | null
@@ -99,11 +100,13 @@ export default function CardRow({ card, onChange }) {
               <button className="small ghost" title="Set price manually" onClick={() => { setPriceInput(market || ''); setMode(mode === 'price' ? null : 'price'); }}>$</button>
             </>
           )}
+          <button className="small ghost" title="Edit card details, grading, or what you paid" onClick={() => setMode(mode === 'edit' ? null : 'edit')}>Edit</button>
           {!inTrade && <button className="small ghost danger" title="Delete card" disabled={busy}
             onClick={() => act(() => api.deleteCard(card._id), `Delete ${card.name}? This removes it from inventory${sold ? ' and removes its sale money' : ''}. The purchase payment stays recorded.`)}>✕</button>}
         </div>
         {msg && <div className="error" style={{ gridColumn: '1 / -1', marginTop: 0 }}>{msg}</div>}
         {mode === 'sell' && <SellForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
+        {mode === 'edit' && <EditCardForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
         {mode === 'cleanse' && <CleanseForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
         {mode === 'price' && (
           <form className="inline-form" onSubmit={savePrice}>

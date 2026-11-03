@@ -32,7 +32,12 @@ const cardSchema = new mongoose.Schema(
     costEstimated: { type: Boolean, default: false }, // cost is a guess (e.g. 80% of market)
     oldId: { type: String, default: null }, // id in the old system, so it can't be imported twice
     boughtDate: { ...dateStr, required: true },
-    cost: { type: Number, required: true, min: 0 },
+    cost: { type: Number, required: true, min: 0 }, // what we paid + any grading fees
+    // Grading fees added after buying (each also came out of a wallet)
+    gradingFees: [{
+      date: String, amount: Number, wallet: String, company: String, grade: String,
+      tx: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
+    }],
     marketAtPurchase: { type: Number, required: true, min: 0 },
     // cost / marketAtPurchase * 100, frozen at purchase time
     pctOfMarket: { type: Number },
@@ -77,7 +82,9 @@ cardSchema.virtual('isGraded').get(function () {
 
 cardSchema.pre('validate', function (next) {
   if (this.marketAtPurchase > 0) {
-    this.pctOfMarket = Math.round((this.cost / this.marketAtPurchase) * 1000) / 10;
+    // % of market paid is about the buy price, so grading fees are left out
+    const fees = (this.gradingFees || []).reduce((a, f) => a + (f.amount || 0), 0);
+    this.pctOfMarket = Math.round(((this.cost - fees) / this.marketAtPurchase) * 1000) / 10;
   }
   next();
 });

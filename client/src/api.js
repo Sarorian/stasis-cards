@@ -42,6 +42,7 @@ export const api = {
   cards: (params = {}) => request('GET', '/cards' + qs(params)),
   updateCard: (id, body) => request('PATCH', `/cards/${id}`, body),
   deleteCard: (id) => request('DELETE', `/cards/${id}`),
+  removeGradingFee: (id, feeId) => request('DELETE', `/cards/${id}/grading/${feeId}`),
   sellCard: (id, body) => request('POST', `/cards/${id}/sell`, body),
   unsellCard: (id) => request('POST', `/cards/${id}/unsell`),
   refreshCard: (id) => request('POST', `/cards/${id}/refresh`),
