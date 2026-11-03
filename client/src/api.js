@@ -46,6 +46,7 @@ export const api = {
   sellCard: (id, body) => request('POST', `/cards/${id}/sell`, body),
   unsellCard: (id) => request('POST', `/cards/${id}/unsell`),
   refreshCard: (id) => request('POST', `/cards/${id}/refresh`),
+  linkCard: (id, body) => request('POST', `/cards/${id}/link`, body),
 
   purchases: () => request('GET', '/purchases'),
   createPurchase: (body) => request('POST', '/purchases', body),

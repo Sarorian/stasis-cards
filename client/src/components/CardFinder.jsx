@@ -10,8 +10,8 @@ const quotaText = (n) => (n != null ? `${n} lookups left today` : '');
   Used by Add purchase and the Trade page. Calls onPick(result) with
   { name, number, setName, printing, price, imageUrl, source, url, external }.
 */
-export default function CardFinder({ game, onGameChange, onPick, picked = false, autoFocus = false }) {
-  const [text, setText] = useState('');
+export default function CardFinder({ game, onGameChange, onPick, picked = false, autoFocus = false, initialText = '' }) {
+  const [text, setText] = useState(initialText);
   const [list, setList] = useState(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');

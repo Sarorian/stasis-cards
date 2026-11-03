@@ -5,6 +5,7 @@ import CardImage from './CardImage.jsx';
 import SellForm from './SellForm.jsx';
 import CleanseForm from './CleanseForm.jsx';
 import EditCardForm from './EditCardForm.jsx';
+import FindMatchForm from './FindMatchForm.jsx';
 
 export default function CardRow({ card, onChange }) {
   const [mode, setMode] = useState(null); // 'sell' | 'price' | null
@@ -97,6 +98,7 @@ export default function CardRow({ card, onChange }) {
               <button className="small primary" onClick={() => setMode(mode === 'sell' ? null : 'sell')}>Sell</button>
               <button className="small" title="Owen or Ben takes this card to cleanse debt" onClick={() => setMode(mode === 'cleanse' ? null : 'cleanse')}>Cleanse</button>
               <button className="small ghost" title="Refresh this card's price and image" disabled={busy} onClick={() => act(() => api.refreshCard(card._id))}>{busy ? '…' : '↻'}</button>
+              <button className="small ghost" title="Search and pick the exact printing for this card" onClick={() => setMode(mode === 'match' ? null : 'match')}>Find match</button>
               <button className="small ghost" title="Set price manually" onClick={() => { setPriceInput(market || ''); setMode(mode === 'price' ? null : 'price'); }}>$</button>
             </>
           )}
@@ -106,6 +108,7 @@ export default function CardRow({ card, onChange }) {
         </div>
         {msg && <div className="error" style={{ gridColumn: '1 / -1', marginTop: 0 }}>{msg}</div>}
         {mode === 'sell' && <SellForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
+        {mode === 'match' && <FindMatchForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
         {mode === 'edit' && <EditCardForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
         {mode === 'cleanse' && <CleanseForm card={card} onCancel={() => setMode(null)} onDone={() => { setMode(null); onChange?.(); }} />}
         {mode === 'price' && (

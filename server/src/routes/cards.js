@@ -187,12 +187,61 @@ r.post('/:id/unsell', ah(async (req, res) => {
   res.json(card);
 }));
 
-// Refresh one card's market price and image now
+// Refresh one card's market price and image now (in-stock only: sold cards keep their history)
 r.post('/:id/refresh', ah(async (req, res) => {
   const card = await Card.findById(req.params.id);
   if (!card) throw new HttpError(404, 'Card not found.');
+  if (card.status !== 'in_stock') throw new HttpError(400, `${card.name} isn't in stock, so its price isn't updated.`);
   const result = await refreshCard(card, { force: true });
   res.json({ card, result });
+}));
+
+/*
+  Link a card to the exact printing picked in "Find match".
+  { external, imageUrl, setName, name, number, price, source, url, rename }
+  Updates which listing future price updates follow, the picture, and the current market price.
+  Never touches cost or sales. rename = also take the listing's name / number / set.
+*/
+r.post('/:id/link', ah(async (req, res) => {
+  const card = await Card.findById(req.params.id);
+  if (!card) throw new HttpError(404, 'Card not found.');
+  if (card.status !== 'in_stock') throw new HttpError(400, `${card.name} isn't in stock.`);
+  const b = req.body || {};
+  const ext = b.external || {};
+  if (!ext.tcgapiId && !ext.pokemontcgId) throw new HttpError(400, 'Pick a card from the search results.');
+
+  // Replace the old match entirely, keep any graded-price id
+  const keep = card.external?.pricechartingId;
+  card.external = {
+    tcgapiId: ext.tcgapiId || undefined,
+    tcgapiPrinting: ext.tcgapiPrinting || undefined,
+    pokemontcgId: ext.pokemontcgId || undefined,
+    pokemontcgVariant: ext.pokemontcgVariant || undefined,
+    pricechartingId: keep || undefined,
+  };
+  if (b.imageUrl) card.imageUrl = b.imageUrl;
+  if (b.rename) {
+    if (String(b.name || '').trim()) card.name = String(b.name).trim();
+    if (b.number !== undefined) card.number = String(b.number || '').trim();
+    if (b.setName !== undefined) card.setName = String(b.setName || '').trim();
+  } else if (b.setName && !card.setName) {
+    card.setName = b.setName;
+  }
+
+  const price = Number(b.price);
+  if (price > 0) {
+    const graded = Boolean(card.graded?.company);
+    card.market.price = round2(price);
+    card.market.sources = [{ source: `${b.source || 'TCGplayer'}${graded ? ' (raw)' : ''}`, price: round2(price), url: b.url }];
+    card.market.updatedAt = new Date();
+    card.market.manualOverride = false;
+    const d = today();
+    const last = card.priceHistory[card.priceHistory.length - 1];
+    if (last?.date === d) last.price = card.market.price;
+    else card.priceHistory.push({ date: d, price: card.market.price });
+  }
+  await card.save();
+  res.json(card);
 }));
 
 export default r;
