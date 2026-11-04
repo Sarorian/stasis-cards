@@ -7,6 +7,7 @@ const REASON = {
   graded: { label: 'Graded', cls: 'graded' },
   japanese: { label: 'Japanese', cls: 'jp' },
   notFound: { label: 'Not found', cls: 'neg' },
+  condition: { label: 'Below NM', cls: 'cond' },
 };
 
 // Cards whose market price has to be typed in: graded, Japanese non-Pokemon, or not found by the lookup
@@ -56,14 +57,15 @@ export default function ManualPrices({ onSaved, onClose }) {
         </div>
       </div>
       <p className="hint" style={{ marginTop: 0 }}>
-        Graded and Japanese One Piece / Riftbound cards are always priced by hand, and so are cards the lookup couldn't find.
-        Graded cards come back here after every price update with their last price filled in: change it, or save it as-is if it's still right.
+        Graded cards, cards below NM (LP/MP/HP/DMG) and Japanese One Piece / Riftbound cards are always priced by hand, and so are cards the lookup couldn't find.
+        Graded and below-NM cards come back here after every price update with their last price filled in: change it, or save it as-is if it's still right.
         Use the links to check recent sales. Clear a box to skip that card.
       </p>
       {shown.length === 0 && <p className="hint">Nothing waiting. 🎉</p>}
       <div className="mp-list">
         {shown.map((c) => {
-          const r = REASON[c.reason];
+          const r = c.reason === 'condition' ? { ...REASON.condition, label: c.condition } : REASON[c.reason];
+          const links = checkLinks(c).map(([label, url]) => (label === 'TCGplayer' && c.tcgplayerUrl ? [label, c.tcgplayerUrl] : [label, url]));
           return (
             <div className="mp-row" key={c.id}>
               <CardImage src={c.imageUrl} game={c.game} alt="" className="result-img" />
@@ -76,11 +78,12 @@ export default function ManualPrices({ onSaved, onClose }) {
                 </span>
                 <span className="mp-links">
                   <span className={`pill ${r.cls}`}>{r.label}</span>
-                  {checkLinks(c).map(([label, url]) => <a key={label} href={url} target="_blank" rel="noreferrer">{label} ↗</a>)}
+                  {links.map(([label, url]) => <a key={label} href={url} target="_blank" rel="noreferrer">{label} ↗</a>)}
+                  {c.reason === 'condition' && c.nmPrice ? <span className="faint">NM market {money(c.nmPrice)}</span> : null}
                 </span>
               </div>
               <div className="mp-now faint">
-                {c.manual ? <>{c.needed && c.reason === 'graded' ? 're-check · ' : ''}was {money(c.price)}<br />set {fmtDate(c.updatedAt?.slice(0, 10))}</> : c.reason === 'notFound' ? <>shows {money(c.price)}<br />(no match)</> : <>shows {money(c.price)}</>}
+                {c.manual ? <>{c.needed && (c.reason === 'graded' || c.reason === 'condition') ? 're-check · ' : ''}was {money(c.price)}<br />set {fmtDate(c.updatedAt?.slice(0, 10))}</> : c.reason === 'notFound' ? <>shows {money(c.price)}<br />(no match)</> : <>shows {money(c.price)}</>}
               </div>
               <label className="field mp-input">Market price
                 <input type="number" min="0" step="0.01" placeholder="0.00" value={values[c.id] ?? ''}

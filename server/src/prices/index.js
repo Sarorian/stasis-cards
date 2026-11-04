@@ -68,9 +68,12 @@ export function ownChange30d(card) {
   return Math.round(((now - base) / base) * 1000) / 10;
 }
 
-// Update one card document in place. Returns a short result summary.
-export async function refreshCard(card, { force = false } = {}) {
-  if (card.market?.manualOverride && !force) return { skipped: 'manual price' };
+/*
+  Update one card document in place.
+  referenceOnly: just save the NM market price as a reference (for cards below NM); the card's own price isn't touched.
+*/
+export async function refreshCard(card, { force = false, referenceOnly = false } = {}) {
+  if (card.market?.manualOverride && !force && !referenceOnly) return { skipped: 'manual price' };
   const res = await lookup({
     name: card.name,
     number: card.number,
@@ -82,6 +85,15 @@ export async function refreshCard(card, { force = false } = {}) {
   if (res.imageUrl && !card.imageUrl) card.imageUrl = res.imageUrl;
   if (res.setName && !card.setName) card.setName = res.setName;
   card.external = { ...(card.external?.toObject ? card.external.toObject() : card.external), ...res.external };
+  if (referenceOnly) {
+    if (res.price) {
+      card.market.nmPrice = round2(res.price);
+      card.market.nmUpdatedAt = new Date();
+      card.market.nmUrl = res.sources?.[0]?.url || card.market.nmUrl;
+    }
+    await card.save();
+    return { price: res.price, reference: true, errors: res.errors, quotaHit: res.quotaHit };
+  }
   card.market.lookupFailed = !res.price;
   if (res.price) {
     card.market.price = round2(res.price);
@@ -140,6 +152,8 @@ export function startUpdateAll() {
 export function manualReason(card) {
   if (card.graded?.company && !process.env.PRICECHARTING_TOKEN) return 'graded';
   if (card.language === 'JP' && card.game !== 'Pokemon') return 'japanese';
+  // TCGplayer's market price is for Near Mint, so LP/MP/HP/DMG cards are priced by hand
+  if (!card.graded?.company && card.condition && card.condition !== 'NM') return 'condition';
   if (card.market?.lookupFailed && !card.market?.manualOverride) return 'notFound';
   return null;
 }
@@ -150,15 +164,28 @@ async function run() {
   await settings.save();
   // Oldest prices first so a quota stop still refreshes the stalest cards.
   // Graded and Japanese non-Pokemon cards are skipped: they go to "Prices to enter" instead.
-  const all = await Card.find({ status: 'in_stock', 'market.manualOverride': { $ne: true } }).sort({ 'market.updatedAt': 1 });
+  // Below-NM cards still get looked up, but only to save the NM price as a reference for you.
+  const all = await Card.find({ status: 'in_stock' }).sort({ 'market.updatedAt': 1 });
   const cards = all.filter((c) => {
     const why = manualReason(c);
-    return why !== 'graded' && why !== 'japanese';
+    if (why === 'condition') return true;
+    return why !== 'graded' && why !== 'japanese' && !c.market?.manualOverride;
   });
-  job.skippedForManual = all.length - cards.length;
+  job.skippedForManual = all.filter((c) => ['graded', 'japanese', 'condition'].includes(manualReason(c))).length;
   job.total = cards.length;
   for (const card of cards) {
     try {
+      if (manualReason(card) === 'condition') {
+        const ref = await refreshCard(card, { referenceOnly: true });
+        if (ref.quotaHit) {
+          job.stoppedReason = 'Daily price lookup limit reached. The rest will update tomorrow; run it again then.';
+          job.done++;
+          break;
+        }
+        job.done++;
+        await sleep(250);
+        continue;
+      }
       const r = await refreshCard(card);
       if (r.price) job.updated++;
       else job.notFound.push({ id: String(card._id), name: `${card.name} ${card.number}`.trim() });

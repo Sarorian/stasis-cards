@@ -52,6 +52,10 @@ const cardSchema = new mongoose.Schema(
       lookupFailed: { type: Boolean, default: false },
       // % change in market price over the last 30 days (from TCG API, or from our own saved prices)
       change30d: { type: Number, default: null },
+      // For cards below NM: the TCGplayer (Near Mint) market price, kept as a reference next to your hand-entered price
+      nmPrice: { type: Number, default: null },
+      nmUpdatedAt: Date,
+      nmUrl: String,
     },
     priceHistory: [{ _id: false, date: String, price: Number }],
     external: {

@@ -73,8 +73,13 @@ r.get('/manual', ah(async (req, res) => {
       price: c.market?.price || 0, manual: Boolean(c.market?.manualOverride), updatedAt: c.market?.updatedAt || null, reason,
       // Still waiting on a price. Graded cards are asked again after every price update,
       // even if they already have a price (it's prefilled so you can confirm or change it).
+      // Below-NM cards work the same way as graded ones.
       needed: Boolean(reason === 'notFound' || !c.market?.manualOverride
-        || (reason === 'graded' && lastRun && (!c.market?.updatedAt || new Date(c.market.updatedAt) < lastRun))),
+        || ((reason === 'graded' || reason === 'condition') && lastRun && (!c.market?.updatedAt || new Date(c.market.updatedAt) < lastRun))),
+      nmPrice: c.market?.nmPrice ?? null,
+      nmUpdatedAt: c.market?.nmUpdatedAt || null,
+      // Product page on TCGplayer (shows prices for each condition) when we know it
+      tcgplayerUrl: c.market?.nmUrl || (c.market?.sources || []).map((s) => s.url).find((u) => /tcgplayer\.com\/product/.test(u || '')) || null,
     }))
     // Oldest prices first
     .sort((a, b) => new Date(a.updatedAt || 0) - new Date(b.updatedAt || 0));

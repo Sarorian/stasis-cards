@@ -10,6 +10,7 @@ import Trade from './pages/Trade.jsx';
 import Misc from './pages/Misc.jsx';
 import Debt from './pages/Debt.jsx';
 import Setup from './pages/Setup.jsx';
+import Insights from './pages/Insights.jsx';
 
 export default function App() {
   const [authed, setAuthed] = useState(Boolean(getToken()));
@@ -40,6 +41,7 @@ export default function App() {
         <NavLink to="/trade" className="navlink">Trade</NavLink>
         <NavLink to="/misc" className="navlink">Misc</NavLink>
         <NavLink to="/debt" className="navlink">Debt</NavLink>
+        <NavLink to="/insights" className="navlink">Insights</NavLink>
         <NavLink to="/admin" className="navlink">Admin</NavLink>
         <button className="ghost small" onClick={logout}>Log out</button>
       </header>
@@ -52,6 +54,7 @@ export default function App() {
           <Route path="/misc" element={<Misc />} />
           <Route path="/debt" element={<Debt />} />
           <Route path="/setup" element={<Setup />} />
+          <Route path="/insights" element={<Insights />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

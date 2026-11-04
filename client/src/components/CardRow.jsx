@@ -80,6 +80,9 @@ export default function CardRow({ card, onChange }) {
             <>
               {money(market)}
               <div className="faint">{card.market?.manualOverride ? 'manual price' : sources[0]?.source === 'At purchase' ? 'price at purchase' : `updated ${fmtTime(card.market?.updatedAt)}`}</div>
+              {!sold && !graded && card.condition !== 'NM' && card.market?.nmPrice ? (
+                <div className="faint" title="TCGplayer's Near Mint market price, for reference">NM ref {money(card.market.nmPrice)}</div>
+              ) : null}
               {card.market?.change30d !== null && card.market?.change30d !== undefined && (
                 <div className={`trend ${card.market.change30d > 0 ? 'pos' : card.market.change30d < 0 ? 'neg' : ''}`}
                   title="Change in market price over the last 30 days">

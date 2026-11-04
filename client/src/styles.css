@@ -360,3 +360,13 @@ label.jp-toggle input { width: auto; margin: 0; }
 }
 .trend { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .trend .faint { font-weight: 400; }
+.pill.cond { background: var(--surface-2); color: var(--warn); }
+
+/* ---------- simple dashboard ---------- */
+.dash-main { align-items: start; }
+.dash-main > .panel { margin-bottom: 0; }
+.dash-main + .panel { margin-top: 14px; }
+.quick-row { grid-template-columns: auto 1fr 1fr; }
+.quick-row2 { grid-template-columns: 1fr 1fr 1.1fr auto; }
+button.attention { border-color: var(--warn); color: var(--warn); }
+@media (max-width: 720px) { .form-row.quick-row, .form-row.quick-row2 { grid-template-columns: 1fr 1fr !important; } }

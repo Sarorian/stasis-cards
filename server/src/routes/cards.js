@@ -197,7 +197,8 @@ r.post('/:id/refresh', ah(async (req, res) => {
   if (why === 'graded' || why === 'japanese') {
     throw new HttpError(400, `${why === 'graded' ? 'Graded' : 'Japanese ' + card.game} cards are priced by hand. Use the $ button or "Prices to enter" on the Dashboard.`);
   }
-  const result = await refreshCard(card, { force: true });
+  // Below NM: refresh only the NM reference price, never your hand-entered price
+  const result = await refreshCard(card, { force: true, referenceOnly: why === 'condition' });
   res.json({ card, result });
 }));
 
@@ -235,7 +236,12 @@ r.post('/:id/link', ah(async (req, res) => {
   }
 
   const price = Number(b.price);
-  if (price > 0) {
+  if (price > 0 && manualReason(card) === 'condition') {
+    // Below NM: the listing's price is the NM price, so keep it as the reference only
+    card.market.nmPrice = round2(price);
+    card.market.nmUpdatedAt = new Date();
+    card.market.nmUrl = b.url || card.market.nmUrl;
+  } else if (price > 0) {
     const graded = Boolean(card.graded?.company);
     card.market.price = round2(price);
     card.market.sources = [{ source: `${b.source || 'TCGplayer'}${graded ? ' (raw)' : ''}`, price: round2(price), url: b.url }];
