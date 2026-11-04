@@ -2,6 +2,7 @@ import Card from '../models/Card.js';
 import Settings from '../models/Settings.js';
 import { today, round2 } from '../constants.js';
 import { tcgapi, pokemontcg, pricecharting, QuotaError, tcgapiState } from './providers.js';
+import { recordSnapshot } from '../snapshots.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -27,6 +28,7 @@ export async function lookup({ name, number, game, graded, language = 'EN', exte
       if (!found.setName && hit.setName) found.setName = hit.setName;
       if (hit.price) {
         sources.push({ source: hit.source, price: hit.price, url: hit.url });
+        if (hit.change30d !== undefined) found.change30d = hit.change30d;
         break; // one raw market price is enough; saves daily lookups
       }
     } catch (err) {
@@ -54,6 +56,18 @@ export async function lookup({ name, number, game, graded, language = 'EN', exte
   return { price, sources, ...found, errors, quotaHit, quotaRemaining: tcgapiState.remaining };
 }
 
+// 30-day % change from the prices we've saved ourselves (used when the API doesn't give one).
+// Uses the newest saved price that's 25-40 days old; null if there isn't one yet.
+export function ownChange30d(card) {
+  const now = card.market?.price;
+  if (!now) return null;
+  const day = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+  const window = (card.priceHistory || []).filter((h) => h.price > 0 && h.date <= day(25) && h.date >= day(40));
+  if (!window.length) return null;
+  const base = window[window.length - 1].price; // history is oldest-first, so this is the newest in the window
+  return Math.round(((now - base) / base) * 1000) / 10;
+}
+
 // Update one card document in place. Returns a short result summary.
 export async function refreshCard(card, { force = false } = {}) {
   if (card.market?.manualOverride && !force) return { skipped: 'manual price' };
@@ -78,6 +92,7 @@ export async function refreshCard(card, { force = false } = {}) {
     const last = card.priceHistory[card.priceHistory.length - 1];
     if (last?.date === d) last.price = card.market.price;
     else card.priceHistory.push({ date: d, price: card.market.price });
+    card.market.change30d = res.change30d ?? ownChange30d(card);
   }
   await card.save();
   return { price: res.price, errors: res.errors, quotaHit: res.quotaHit };
@@ -130,6 +145,9 @@ export function manualReason(card) {
 }
 
 async function run() {
+  const settings = await Settings.get();
+  settings.pricesUpdateStartedAt = new Date();
+  await settings.save();
   // Oldest prices first so a quota stop still refreshes the stalest cards.
   // Graded and Japanese non-Pokemon cards are skipped: they go to "Prices to enter" instead.
   const all = await Card.find({ status: 'in_stock', 'market.manualOverride': { $ne: true } }).sort({ 'market.updatedAt': 1 });
@@ -158,6 +176,7 @@ async function run() {
   const s = await Settings.get();
   s.pricesUpdatedAt = new Date();
   await s.save();
+  await recordSnapshot().catch(() => {});
   job.running = false;
   job.finishedAt = new Date();
 }

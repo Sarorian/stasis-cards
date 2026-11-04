@@ -3,6 +3,8 @@ import { ah, HttpError } from '../util.js';
 import { GAMES } from '../constants.js';
 import { lookup, startUpdateAll, jobStatus, manualReason } from '../prices/index.js';
 import Card from '../models/Card.js';
+import Settings from '../models/Settings.js';
+import { recordSnapshot } from '../snapshots.js';
 import { round2, today } from '../constants.js';
 import { checkLinks, searchCards, pricecharting, QuotaError } from '../prices/providers.js';
 
@@ -60,7 +62,8 @@ r.get('/status', (req, res) => res.json(jobStatus()));
 
 // Cards that need a price typed in by hand (graded, Japanese non-Pokemon, or not found)
 r.get('/manual', ah(async (req, res) => {
-  const cards = await Card.find({ status: 'in_stock' }).select('-priceHistory').lean();
+  const [cards, settings] = await Promise.all([Card.find({ status: 'in_stock' }).select('-priceHistory').lean(), Settings.get()]);
+  const lastRun = settings.pricesUpdateStartedAt ? new Date(settings.pricesUpdateStartedAt) : null;
   const list = cards
     .map((c) => ({ c, reason: manualReason(c) }))
     .filter((x) => x.reason)
@@ -68,8 +71,10 @@ r.get('/manual', ah(async (req, res) => {
       id: c._id, name: c.name, number: c.number, setName: c.setName, game: c.game, language: c.language || 'EN',
       graded: c.graded?.company ? c.graded : null, condition: c.condition, imageUrl: c.imageUrl, cost: c.cost,
       price: c.market?.price || 0, manual: Boolean(c.market?.manualOverride), updatedAt: c.market?.updatedAt || null, reason,
-      // Still waiting on a price (graded/Japanese cards you've already priced by hand are listed, but not counted)
-      needed: reason === 'notFound' || !c.market?.manualOverride,
+      // Still waiting on a price. Graded cards are asked again after every price update,
+      // even if they already have a price (it's prefilled so you can confirm or change it).
+      needed: Boolean(reason === 'notFound' || !c.market?.manualOverride
+        || (reason === 'graded' && lastRun && (!c.market?.updatedAt || new Date(c.market.updatedAt) < lastRun))),
     }))
     // Oldest prices first
     .sort((a, b) => new Date(a.updatedAt || 0) - new Date(b.updatedAt || 0));
@@ -97,6 +102,7 @@ r.post('/manual', ah(async (req, res) => {
     await card.save();
     saved++;
   }
+  if (saved) await recordSnapshot().catch(() => {});
   res.json({ saved });
 }));
 

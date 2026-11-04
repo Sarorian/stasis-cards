@@ -10,6 +10,7 @@ import GamePerformance from '../components/GamePerformance.jsx';
 import { YearOneFigures } from './Setup.jsx';
 import RevenueProfitChart from '../components/RevenueProfitChart.jsx';
 import ManualPrices from '../components/ManualPrices.jsx';
+import InventoryValueChart from '../components/InventoryValueChart.jsx';
 import { GAMES } from '../format.js';
 
 export default function Dashboard() {
@@ -70,6 +71,24 @@ export default function Dashboard() {
       {showManual && <ManualPrices onSaved={() => { load(); loadManualCount(); }} onClose={() => setShowManual(false)} />}
 
       <WalletsPanel wallets={s.wallets} onChange={load} />
+
+      {s.inventoryHistory?.length > 0 && (() => {
+        const first = s.inventoryHistory[0];
+        const lastSnap = s.inventoryHistory[s.inventoryHistory.length - 1];
+        const change = Math.round((lastSnap.market - first.market) * 100) / 100;
+        return (
+          <div className="panel">
+            <div className="panel-head">
+              <h2>Inventory value</h2>
+              <span className="hint">
+                {money(lastSnap.market)} market · {money(lastSnap.cost)} cost
+                {s.inventoryHistory.length > 1 && <> · <span className={tone(change)}>{change >= 0 ? '+' : ''}{money(change)}</span> since {fmtDate(first.date)}</>}
+              </span>
+            </div>
+            <InventoryValueChart history={s.inventoryHistory} />
+          </div>
+        );
+      })()}
 
       {s.sinceStart && (
         <div className="panel">

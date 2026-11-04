@@ -50,6 +50,8 @@ const cardSchema = new mongoose.Schema(
       manualOverride: { type: Boolean, default: false },
       // The last automatic lookup found no price (shows up in "Prices to enter")
       lookupFailed: { type: Boolean, default: false },
+      // % change in market price over the last 30 days (from TCG API, or from our own saved prices)
+      change30d: { type: Number, default: null },
     },
     priceHistory: [{ _id: false, date: String, price: Number }],
     external: {

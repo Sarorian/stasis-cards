@@ -26,7 +26,9 @@ export default function ManualPrices({ onSaved, onClose }) {
   if (!list) return <div className="panel hint">{msg || 'Loading…'}</div>;
 
   const shown = list.filter((c) => filter === 'all' || c.needed);
-  const changed = list.filter((c) => Number(values[c.id]) > 0 && Number(values[c.id]) !== (c.manual ? c.price : -1));
+  // Waiting cards with a price in the box get saved (a prefilled graded price = "still right"),
+  // plus any other hand-priced card whose price you changed
+  const changed = list.filter((c) => Number(values[c.id]) > 0 && (c.needed || Number(values[c.id]) !== (c.manual ? c.price : -1)));
 
   async function save() {
     setBusy(true);
@@ -55,7 +57,8 @@ export default function ManualPrices({ onSaved, onClose }) {
       </div>
       <p className="hint" style={{ marginTop: 0 }}>
         Graded and Japanese One Piece / Riftbound cards are always priced by hand, and so are cards the lookup couldn't find.
-        Use the links to check recent sales. Leave a box empty to skip it.
+        Graded cards come back here after every price update with their last price filled in: change it, or save it as-is if it's still right.
+        Use the links to check recent sales. Clear a box to skip that card.
       </p>
       {shown.length === 0 && <p className="hint">Nothing waiting. 🎉</p>}
       <div className="mp-list">
@@ -77,7 +80,7 @@ export default function ManualPrices({ onSaved, onClose }) {
                 </span>
               </div>
               <div className="mp-now faint">
-                {c.manual ? <>now {money(c.price)}<br />set {fmtDate(c.updatedAt?.slice(0, 10))}</> : c.reason === 'notFound' ? <>shows {money(c.price)}<br />(no match)</> : <>shows {money(c.price)}</>}
+                {c.manual ? <>{c.needed && c.reason === 'graded' ? 're-check · ' : ''}was {money(c.price)}<br />set {fmtDate(c.updatedAt?.slice(0, 10))}</> : c.reason === 'notFound' ? <>shows {money(c.price)}<br />(no match)</> : <>shows {money(c.price)}</>}
               </div>
               <label className="field mp-input">Market price
                 <input type="number" min="0" step="0.01" placeholder="0.00" value={values[c.id] ?? ''}

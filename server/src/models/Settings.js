@@ -14,6 +14,8 @@ const settingsSchema = new mongoose.Schema(
       },
     ],
     pricesUpdatedAt: Date,
+    // When the last "Update market prices" run started (graded cards priced before this get asked again)
+    pricesUpdateStartedAt: Date,
     // The day the app's numbers start (everything before is "Year 1" from the old system)
     startDate: { type: String, default: null },
     // Summary of the old system's records, shown separately on the Dashboard

@@ -80,6 +80,12 @@ export default function CardRow({ card, onChange }) {
             <>
               {money(market)}
               <div className="faint">{card.market?.manualOverride ? 'manual price' : sources[0]?.source === 'At purchase' ? 'price at purchase' : `updated ${fmtTime(card.market?.updatedAt)}`}</div>
+              {card.market?.change30d !== null && card.market?.change30d !== undefined && (
+                <div className={`trend ${card.market.change30d > 0 ? 'pos' : card.market.change30d < 0 ? 'neg' : ''}`}
+                  title="Change in market price over the last 30 days">
+                  {card.market.change30d > 0 ? '▲' : card.market.change30d < 0 ? '▼' : '■'} {Math.abs(card.market.change30d).toFixed(1)}% <span className="faint">30d</span>
+                </div>
+              )}
             </>
           )}
         </div>

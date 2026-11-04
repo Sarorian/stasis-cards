@@ -358,3 +358,5 @@ label.jp-toggle input { width: auto; margin: 0; }
   .mp-now { grid-column: 2; text-align: left; }
   .mp-input { grid-column: 2; }
 }
+.trend { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trend .faint { font-weight: 400; }

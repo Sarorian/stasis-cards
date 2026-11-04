@@ -7,6 +7,7 @@ import DebtEntry from '../models/DebtEntry.js';
 import { balances as debtBalances } from './debt.js';
 import MiscEntry from '../models/MiscEntry.js';
 import { summarize as summarizeMisc } from './misc.js';
+import { recordSnapshot, snapshotHistory } from '../snapshots.js';
 import { ah, walletBalances, binderPool, paymentLabel } from '../util.js';
 import { GAMES, WALLETS, PARTNERS, round2, today } from '../constants.js';
 
@@ -263,7 +264,12 @@ r.get('/', ah(async (req, res) => {
     .map((c) => ({ id: c._id, name: c.name, game: c.game, cost: c.cost, market: c.market?.price || 0, roiPct: pct((c.market?.price || 0) - c.cost, c.cost) }))
     .sort((a, b) => b.roiPct - a.roiPct);
 
+  // Keep today's inventory value saved, then send the history for the chart
+  await recordSnapshot({ count: inStock.length, market: inventoryMarket, cost: inventoryCost, binderCost: pool.cost, sealedCost: miscLeftCost }).catch(() => {});
+  const inventoryHistory = await snapshotHistory();
+
   res.json({
+    inventoryHistory,
     startingCapital: capital,
     startDate: settings.startDate,
     sinceStart,

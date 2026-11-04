@@ -10,6 +10,9 @@ const SORTS = {
   roi: (a, b) => (roiPct(b.cost, b.market?.price) ?? -1e9) - (roiPct(a.cost, a.market?.price) ?? -1e9),
   market: (a, b) => (b.market?.price || 0) - (a.market?.price || 0),
   name: (a, b) => a.name.localeCompare(b.name),
+  // Biggest 30-day gainers first, cards without a trend last
+  trendUp: (a, b) => (b.market?.change30d ?? -1e9) - (a.market?.change30d ?? -1e9),
+  trendDown: (a, b) => (a.market?.change30d ?? 1e9) - (b.market?.change30d ?? 1e9),
   soldDate: (a, b) => (b.sale?.date || '').localeCompare(a.sale?.date || ''),
 };
 
@@ -64,6 +67,8 @@ export default function Inventory() {
             <option value="roi">Highest ROI</option>
             <option value="market">Highest market</option>
             <option value="name">Name</option>
+            {view !== 'sold' && <option value="trendUp">Rising (30 days)</option>}
+            {view !== 'sold' && <option value="trendDown">Falling (30 days)</option>}
           </select>
           {view === 'in_stock' && cards && (
             <span className="hint" style={{ marginLeft: 'auto' }}>

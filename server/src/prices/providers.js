@@ -104,7 +104,11 @@ export async function tcgapi({ name, number, game, language = 'EN', external = {
     const rows = Array.isArray(json.data) ? json.data : json.data ? [json.data] : [];
     const row = rows.find((p) => p.printing === external.tcgapiPrinting && p.market_price) || rows.find((p) => p.market_price);
     if (row) {
-      return { source: 'TCGplayer', price: round2(row.market_price), external: { tcgapiId: external.tcgapiId, tcgapiPrinting: row.printing } };
+      const pct = (v) => (v === null || v === undefined || Number.isNaN(Number(v)) ? null : Math.round(Number(v) * 10) / 10);
+      return {
+        source: 'TCGplayer', price: round2(row.market_price), change30d: pct(row.price_change_30d),
+        external: { tcgapiId: external.tcgapiId, tcgapiPrinting: row.printing },
+      };
     }
   }
 
