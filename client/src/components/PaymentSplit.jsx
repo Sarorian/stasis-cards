@@ -27,11 +27,13 @@ export function splitError(rows, total) {
   return '';
 }
 
-export default function PaymentSplit({ label = 'Paid via', rows, onChange, total, disabled = false }) {
+// extraMethods: more choices after the wallets, e.g. ["Owen (debt)", "Ben (debt)"] for purchases
+export default function PaymentSplit({ label = 'Paid via', rows, onChange, total, disabled = false, extraMethods = [] }) {
+  const METHODS = [...WALLETS, ...extraMethods];
   const split = rows.length > 1;
   const parts = resolvePayments(rows, total);
   const set = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-  const unused = (i) => WALLETS.filter((w) => w === rows[i].method || !rows.some((r) => r.method === w));
+  const unused = (i) => METHODS.filter((w) => w === rows[i].method || !rows.some((r) => r.method === w));
 
   if (!split) {
     return (
@@ -41,12 +43,12 @@ export default function PaymentSplit({ label = 'Paid via', rows, onChange, total
           {!disabled && (
             <button type="button" className="linkish" onClick={() => onChange([
               { method: rows[0].method, amount: '' },
-              { method: WALLETS.find((w) => w !== rows[0].method), amount: '' },
+              { method: METHODS.find((w) => w !== rows[0].method), amount: '' },
             ])}>split</button>
           )}
         </span>
         <select value={rows[0].method} disabled={disabled} onChange={(e) => set(0, { method: e.target.value })}>
-          {WALLETS.map((w) => <option key={w}>{w}</option>)}
+          {METHODS.map((w) => <option key={w}>{w}</option>)}
         </select>
       </label>
     );
@@ -75,8 +77,8 @@ export default function PaymentSplit({ label = 'Paid via', rows, onChange, total
         );
       })}
       <span className="faint">
-        {rows.length < WALLETS.length && (
-          <button type="button" className="linkish" onClick={() => onChange([...rows.slice(0, -1), { ...rows[rows.length - 1], amount: '' }, { method: WALLETS.find((w) => !rows.some((r) => r.method === w)), amount: '' }])}>
+        {rows.length < METHODS.length && (
+          <button type="button" className="linkish" onClick={() => onChange([...rows.slice(0, -1), { ...rows[rows.length - 1], amount: '' }, { method: METHODS.find((w) => !rows.some((r) => r.method === w)), amount: '' }])}>
             + another wallet
           </button>
         )}

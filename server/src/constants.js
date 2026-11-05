@@ -4,6 +4,9 @@ export const CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 export const GRADERS = ['PSA', 'CGC', 'BGS', 'TAG'];
 // The two partners the business can owe money to
 export const PARTNERS = ['Owen', 'Ben'];
+// Paying for a purchase with a partner's own money (adds to what the business owes them)
+export const DEBT_METHODS = PARTNERS.map((p) => `${p} (debt)`);
+export const debtPerson = (method) => PARTNERS.find((p) => method === `${p} (debt)`) || null;
 // Card language. Japanese Pokemon has its own price catalog; other Japanese cards are priced by hand.
 export const LANGUAGES = ['EN', 'JP'];
 

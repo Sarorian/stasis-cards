@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { WALLETS, CONDITIONS, GRADERS, money, today } from '../format.js';
+import { CONDITIONS, GRADERS, DEBT_METHODS, money, today } from '../format.js';
+import PaymentSplit, { singlePayment, resolvePayments, splitError } from './PaymentSplit.jsx';
 import CardFinder from './CardFinder.jsx';
 import CardImage from './CardImage.jsx';
 
-const blank = (game = 'Pokemon', language = 'EN', paidFrom = 'Cash') => ({
+const blank = (game = 'Pokemon', language = 'EN') => ({
   game, language, pick: null, name: '', number: '', setName: '', imageUrl: '', external: {}, sources: [],
-  condition: 'NM', graded: false, company: 'PSA', grade: '', market: '', cost: '', paidFrom, date: today(),
+  condition: 'NM', graded: false, company: 'PSA', grade: '', market: '', cost: '', date: today(),
 });
 
 // Buy one card in a few clicks (a one-card purchase). Bigger buys go through Add purchase.
 export default function QuickAddCard({ onAdded }) {
   const [f, setF] = useState(blank());
+  const [pay, setPay] = useState(singlePayment());
   const [finderKey, setFinderKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -34,18 +36,23 @@ export default function QuickAddCard({ onAdded }) {
     if (!(Number(f.market) > 0)) return setError('Enter its market value.');
     if (!(Number(f.cost) > 0)) return setError('Enter what you paid.');
     if (f.graded && !String(f.grade).trim()) return setError('Enter the grade.');
+    if (splitError(pay, Number(f.cost))) return setError(splitError(pay, Number(f.cost)));
+    const payments = resolvePayments(pay, Number(f.cost));
+    const payText = payments.map((p) => (payments.length > 1 ? `${money(p.amount)} ${p.method}` : p.method)).join(' + ');
     setBusy(true);
     try {
       await api.createPurchase({
-        date: f.date, paidFrom: f.paidFrom, totalCost: null,
+        date: f.date, totalCost: null,
+        ...(payments.length > 1 ? { payments } : { paidFrom: payments[0].method }),
         cards: [{
           name: f.name.trim(), number: f.number.trim(), game: f.game, language: f.language, setName: f.setName,
           condition: f.condition, graded: f.graded ? { company: f.company, grade: String(f.grade).trim() } : null,
           marketValue: Number(f.market), cost: Number(f.cost), imageUrl: f.imageUrl, external: f.external, sources: f.sources,
         }],
       });
-      setDone(`Added ${f.name} for ${money(Number(f.cost))} from ${f.paidFrom}.`);
-      setF(blank(f.game, f.language, f.paidFrom));
+      setDone(`Added ${f.name} for ${money(Number(f.cost))} (${payText}).`);
+      setF(blank(f.game, f.language));
+      setPay(singlePayment(pay[0].method));
       setFinderKey((k) => k + 1);
       onAdded?.();
     } catch (err) {
@@ -81,11 +88,12 @@ export default function QuickAddCard({ onAdded }) {
                 <select value={f.condition} onChange={set('condition')}>{CONDITIONS.map((c) => <option key={c}>{c}</option>)}</select>
               </label>
             )}
+            <label className="field">Date<input type="date" value={f.date} onChange={set('date')} /></label>
           </div>
           <div className="form-row quick-row2" style={{ marginTop: 8 }}>
             <label className="field">Market<input type="number" min="0" step="0.01" placeholder="0.00" value={f.market} onChange={set('market')} /></label>
             <label className="field">Paid<input type="number" min="0" step="0.01" placeholder="0.00" value={f.cost} onChange={set('cost')} /></label>
-            <label className="field">From<select value={f.paidFrom} onChange={set('paidFrom')}>{WALLETS.map((w) => <option key={w}>{w}</option>)}</select></label>
+            <PaymentSplit label="Paid with" rows={pay} onChange={(r) => { setPay(r); setError(''); setDone(''); }} total={Number(f.cost) || 0} extraMethods={DEBT_METHODS} />
             <button className="primary" disabled={busy}>{busy ? 'Adding…' : 'Add card'}</button>
           </div>
           <div className="hint" style={{ marginTop: 4 }}>

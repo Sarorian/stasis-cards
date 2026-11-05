@@ -3,6 +3,8 @@ export const WALLETS = ['Cash', 'Venmowen', 'Benmo', 'Zelle'];
 export const CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'DMG'];
 export const GRADERS = ['PSA', 'CGC', 'BGS', 'TAG'];
 export const PARTNERS = ['Owen', 'Ben'];
+// Paying for cards with a partner's own money (the business then owes them)
+export const DEBT_METHODS = PARTNERS.map((p) => `${p} (debt)`);
 // Each partner's own Venmo wallet (default when they keep Venmo to cleanse debt)
 export const partnerWallet = (person) => ({ Owen: 'Venmowen', Ben: 'Benmo' }[person] || 'Cash');
 

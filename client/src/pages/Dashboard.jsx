@@ -47,7 +47,8 @@ export default function Dashboard() {
       <div className="grid stats">
         <StatCard hero label="ROI" value={pct(s.roiPct)} tone={tone(s.roiPct)} sub={s.totalSpent > 0 ? `made vs ${money(s.totalSpent)} spent` : 'buy something to see ROI'} />
         <StatCard hero label="Net profit" value={money(s.profit)} tone={tone(s.profit)} sub={s.expenses > 0 ? `after ${money(s.expenses)} expenses` : `${pct(s.marginPct)} margin on cost`} />
-        <StatCard hero label="Net worth" value={money(s.netWorth)} sub={s.debt.total > 0 ? `after ${money(s.debt.total)} debt` : 'cash + stock'} />
+        <StatCard hero label="Net worth" value={money(s.netWorth)}
+          sub={`${money(s.liquid)} wallets + ${money(s.inventory.market)} cards + ${money((s.binder?.cost || 0) + (s.miscStats?.inStock?.cost || 0))} binder/sealed${s.debt.total > 0 ? ` − ${money(s.debt.total)} debt` : ''}`} />
         <StatCard label="Liquid" value={money(s.liquid)} sub={`${money(s.cash)} cash · ${money(s.digital)} digital`} />
         <StatCard label="Inventory at market" value={money(s.inventory.market)} sub={`${s.inventory.count} cards · cost ${money(s.inventory.cost)}`} />
         <Link to="/debt" className="stat-link">

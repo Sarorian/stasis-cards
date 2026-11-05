@@ -13,7 +13,7 @@ const CLEAN_HOW = {
   card: { label: 'Took a card', hint: 'The card counts as sold for the value you enter.' },
   record: { label: 'From the old sheet', hint: 'Record only: just changes the debt.' },
 };
-const TAG = { expense: 'expense', loan: 'loan', record: 'old sheet', wallet: 'money', card: 'card' };
+const TAG = { expense: 'expense', loan: 'loan', record: 'old sheet', wallet: 'money', card: 'card', purchase: 'paid for cards' };
 
 export default function Debt() {
   const [data, setData] = useState(null);

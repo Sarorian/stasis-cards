@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { WALLETS, money, today, fmtDate } from '../format.js';
+import { WALLETS, DEBT_METHODS, money, today, fmtDate } from '../format.js';
+import PaymentSplit, { singlePayment, resolvePayments, splitError } from '../components/PaymentSplit.jsx';
 import CardEntry, { blankCard } from '../components/CardEntry.jsx';
 
 export default function AddPurchase() {
@@ -23,7 +24,7 @@ export default function AddPurchase() {
 function SinglesForm() {
   const navigate = useNavigate();
   const [date, setDate] = useState(today());
-  const [paidFrom, setPaidFrom] = useState('Cash');
+  const [pay, setPay] = useState(singlePayment()); // wallet(s) and/or partner debt
   const [total, setTotal] = useState('');
   const [cards, setCards] = useState([blankCard()]);
   const [error, setError] = useState('');
@@ -46,11 +47,13 @@ function SinglesForm() {
       if (!useTotal && !(Number(c.cost) > 0)) return setError(`Card ${i + 1} needs a bought-for price, or fill in the total purchase cost.`);
       if (c.graded && !c.grade.trim()) return setError(`Card ${i + 1} needs a grade.`);
     }
+    if (splitError(pay, spend)) return setError(splitError(pay, spend));
+    const payments = resolvePayments(pay, spend);
     setBusy(true);
     try {
       await api.createPurchase({
         date,
-        paidFrom,
+        ...(payments.length > 1 ? { payments } : { paidFrom: payments[0].method }),
         totalCost: useTotal ? totalCost : null,
         cards: cards.map((c) => ({
           name: c.name.trim(),
@@ -79,9 +82,7 @@ function SinglesForm() {
       <div className="panel">
         <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
           <label className="field">Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-          <label className="field">Paid from
-            <select value={paidFrom} onChange={(e) => setPaidFrom(e.target.value)}>{WALLETS.map((w) => <option key={w}>{w}</option>)}</select>
-          </label>
+          <PaymentSplit label="Paid with" rows={pay} onChange={(r) => { setPay(r); setError(''); }} total={spend} extraMethods={DEBT_METHODS} />
           <label className="field">Total purchase cost (optional)
             <input type="number" min="0" step="0.01" placeholder="300.00" value={total} onChange={(e) => { setTotal(e.target.value); setError(''); }} />
           </label>
@@ -112,7 +113,7 @@ function SinglesForm() {
         <button onClick={() => setCards((cs) => [...cs, blankCard(cs[cs.length - 1]?.game)])}>+ Add card</button>
         <button className="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save purchase'}</button>
         <span className="hint" style={{ marginLeft: 'auto' }}>
-          {cards.length} card{cards.length > 1 ? 's' : ''} · spending {money(spend)} from {paidFrom} · market {money(totalMarket)}
+          {cards.length} card{cards.length > 1 ? 's' : ''} · spending {money(spend)} from {resolvePayments(pay, spend).map((p) => (pay.length > 1 ? `${p.method} ${money(p.amount)}` : p.method)).join(' + ')} · market {money(totalMarket)}
         </span>
       </div>
     </>

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import Card from '../models/Card.js';
 import Transaction from '../models/Transaction.js';
 import Purchase from '../models/Purchase.js';
+import DebtEntry from '../models/DebtEntry.js';
 import { ah, HttpError, positive, parsePayments, checkWallet } from '../util.js';
 import { today, round2, GAMES, CONDITIONS, GRADERS } from '../constants.js';
 import { refreshCard, manualReason } from '../prices/index.js';
@@ -88,7 +89,13 @@ r.patch('/:id', ah(async (req, res) => {
           p.totalSpent = round2(p.totalSpent + diff);
           if (p.totalCost !== null && p.totalCost !== undefined) p.totalCost = round2(p.totalCost + diff);
           await p.save();
-          await Transaction.updateOne({ purchase: p._id, kind: 'purchase' }, { $inc: { amount: -diff } });
+          if (p.payments?.length) {
+            p.payments[0].amount = round2(p.payments[0].amount + diff);
+            await p.save();
+          }
+          // The biggest wallet payment takes the difference; an all-debt purchase changes the debt instead
+          const tx = await Transaction.updateOne({ purchase: p._id, kind: 'purchase' }, { $inc: { amount: -diff } });
+          if (!tx.matchedCount) await DebtEntry.updateOne({ purchase: p._id }, { $inc: { amount: diff } });
         }
       }
     }

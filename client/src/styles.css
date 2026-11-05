@@ -366,7 +366,7 @@ label.jp-toggle input { width: auto; margin: 0; }
 .dash-main { align-items: start; }
 .dash-main > .panel { margin-bottom: 0; }
 .dash-main + .panel { margin-top: 14px; }
-.quick-row { grid-template-columns: auto 1fr 1fr; }
-.quick-row2 { grid-template-columns: 1fr 1fr 1.1fr auto; }
+.quick-row { grid-template-columns: auto 1fr 1fr minmax(130px, 1.2fr); }
+.quick-row2 { grid-template-columns: 1fr 1fr minmax(150px, 1.6fr) auto; }
 button.attention { border-color: var(--warn); color: var(--warn); }
 @media (max-width: 720px) { .form-row.quick-row, .form-row.quick-row2 { grid-template-columns: 1fr 1fr !important; } }
