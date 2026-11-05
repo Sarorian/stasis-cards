@@ -9,7 +9,7 @@ import MiscEntry from '../models/MiscEntry.js';
 import { summarize as summarizeMisc } from './misc.js';
 import { recordSnapshot, snapshotHistory } from '../snapshots.js';
 import { ah, walletBalances, binderPool, paymentLabel } from '../util.js';
-import { GAMES, WALLETS, PARTNERS, round2, today, binderPctOf, binderValueOf } from '../constants.js';
+import { GAMES, WALLETS, PARTNERS, round2, today } from '../constants.js';
 
 const r = Router();
 
@@ -87,10 +87,8 @@ r.get('/', ah(async (req, res) => {
   const liquid = round2(WALLETS.reduce((a, w) => a + wallets[w], 0));
   const digital = round2(liquid - wallets.Cash);
   const miscLeftCost = round2(miscItems.reduce((a, i) => a + i.remainingCost, 0));
-  // Binder cards count at market: we pay binderPct% of market (Admin setting, default 80),
-  // so the value is the pool's cost ÷ that %
-  const binderPct = binderPctOf(settings);
-  const binderValue = binderValueOf(pool.cost, binderPct);
+  // Binder cards count at their estimated market value (entered with each buy / re-estimate)
+  const binderValue = pool.value;
   const netWorth = round2(liquid + inventoryMarket + binderValue + miscLeftCost - debtTotal);
   const capital = settings.startingCapital;
   const totalSpent = round2(
@@ -213,8 +211,8 @@ r.get('/', ah(async (req, res) => {
     tradedIn: bBuys.filter((e) => e.method === 'Trade').reduce((a, e) => a + e.count, 0),
     tradedOut: bSells.filter((e) => e.method === 'Trade').reduce((a, e) => a + e.count, 0),
     pool,
-    value: binderValueOf(pool.cost, binderPctOf(settings)),
-    pct: binderPctOf(settings),
+    value: pool.value,
+    valuedAt: pool.valuedAt,
   };
 
   // ---- Sealed & misc performance ----
@@ -285,7 +283,6 @@ r.get('/', ah(async (req, res) => {
     // realized profit + unrealized gain (cards, plus the binder's estimated gain) vs everything spent
     roiPct: pct(profit + (inventoryMarket - inventoryCost) + (binderValue - pool.cost), totalSpent),
     binderValue,
-    binderPct,
     // Inventory including the binder at its estimated value
     inventoryTotal: {
       market: round2(inventoryMarket + binderValue),

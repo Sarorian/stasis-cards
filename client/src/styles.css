@@ -349,6 +349,9 @@ label.jp-toggle input { width: auto; margin: 0; }
 .mp-list { max-height: 520px; overflow-y: auto; }
 .mp-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 110px 140px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .mp-row:last-child { border-bottom: 0; }
+.mp-row.binder-value { grid-template-columns: 36px minmax(0, 1fr) 110px 210px; }
+.binder-value .perf-logo { width: 32px; height: 32px; border-radius: 8px; }
+.binder-value .mp-input { flex: 1; }
 .mp-name { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .mp-links { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12px; }
 .mp-links a { color: var(--faint); }
@@ -357,6 +360,8 @@ label.jp-toggle input { width: auto; margin: 0; }
   .mp-row { grid-template-columns: 36px minmax(0, 1fr); }
   .mp-now { grid-column: 2; text-align: left; }
   .mp-input { grid-column: 2; }
+  .mp-row.binder-value { grid-template-columns: 36px minmax(0, 1fr); }
+  .binder-value .bv-input { grid-column: 2; }
 }
 .trend { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .trend .faint { font-weight: 400; }

@@ -81,7 +81,7 @@ r.get('/', ah(async (req, res) => {
     outBinder?: { count, value },                  // our binder cards leaving
     inCards: [{ name, number, game, setName, condition, graded?: {company, grade},
                 imageUrl, external, sources, market, value }],   // their cards coming in
-    inBinder?: { count, value },                   // their binder cards coming in
+    inBinder?: { count, value, market? },          // their binder cards coming in (value = credit, market = worth)
     cash?,                                         // + they pay us, - we pay them; blank = exact difference
     method?                                        // wallet for the cash (required if cash != 0)
     payments?: [{ method, amount }]                // or split the cash across wallets (adds up to |cash|)
@@ -121,6 +121,7 @@ r.post('/', ah(async (req, res) => {
 
   const outBinderValue = outBinderCount ? nonNeg(b.outBinder.value, 'Our binder cards value') : 0;
   const inBinderValue = inBinderCount ? nonNeg(b.inBinder.value, 'Their binder cards value') : 0;
+  const inBinderMarket = inBinderCount && Number(b.inBinder.market) > 0 ? round2(Number(b.inBinder.market)) : null;
   if (outBinderCount < 0 || inBinderCount < 0) throw new HttpError(400, 'Binder card counts must be positive.');
 
   const pool = await binderPool();
@@ -212,10 +213,10 @@ r.post('/', ah(async (req, res) => {
     if (inBinderCount) {
       const entry = await BinderEntry.create({
         type: 'buy', date, count: inBinderCount, amount: s.inBinderValue, method: 'Trade',
-        trade: trade._id, notes: 'Traded in',
+        market: inBinderMarket ?? s.inBinderValue, trade: trade._id, notes: 'Traded in',
       });
       created.entries.push(entry._id);
-      trade.inBinder = { count: inBinderCount, value: s.inBinderValue, entry: entry._id };
+      trade.inBinder = { count: inBinderCount, value: s.inBinderValue, market: inBinderMarket ?? s.inBinderValue, entry: entry._id };
     }
 
     // Only the cash touches a wallet (one row per wallet when split)

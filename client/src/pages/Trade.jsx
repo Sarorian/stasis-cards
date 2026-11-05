@@ -53,7 +53,7 @@ function NewTrade({ onDone }) {
   const [ours, setOurs] = useState([]); // { id, name, number, game, setName, imageUrl, market, cost, value }
   const [ourBinder, setOurBinder] = useState({ count: '', value: '' });
   const [theirs, setTheirs] = useState([]);
-  const [theirBinder, setTheirBinder] = useState({ count: '', value: '' });
+  const [theirBinder, setTheirBinder] = useState({ count: '', value: '', market: '' });
 
   const [cashText, setCashText] = useState(''); // blank = exact difference
   const [direction, setDirection] = useState(null); // null = follow the math; 'in' | 'out' when overridden
@@ -72,6 +72,7 @@ function NewTrade({ onDone }) {
   // Their card values follow the trade-in % until you type your own
   useEffect(() => {
     setTheirs((ts) => ts.map((t) => (t.valueTouched || !num(t.market) ? t : { ...t, value: String(r2((num(t.market) * pctNum) / 100)) })));
+    setTheirBinder((b) => (b.valueTouched || !num(b.market) ? b : { ...b, value: String(r2((num(b.market) * pctNum) / 100)) }));
   }, [pctNum]);
 
   /* ---------- the math ---------- */
@@ -162,7 +163,7 @@ function NewTrade({ onDone }) {
 
   /* ---------- submit ---------- */
   function reset() {
-    setOurs([]); setTheirs([]); setOurBinder({ count: '', value: '' }); setTheirBinder({ count: '', value: '' });
+    setOurs([]); setTheirs([]); setOurBinder({ count: '', value: '' }); setTheirBinder({ count: '', value: '', market: '' });
     setCashText(''); setDirection(null); setNotes(''); setError(''); setPay(singlePayment(pay[0].method));
   }
 
@@ -205,7 +206,7 @@ function NewTrade({ onDone }) {
           graded: t.graded ? { company: t.company, grade: String(t.grade).trim() } : null,
           market: num(t.market), value: num(t.value),
         })),
-        inBinder: num(theirBinder.count) > 0 ? { count: num(theirBinder.count), value: inBinderValue } : null,
+        inBinder: num(theirBinder.count) > 0 ? { count: num(theirBinder.count), value: inBinderValue, market: num(theirBinder.market) || null } : null,
         cash,
         ...(payments.length > 1 ? { payments } : { method: payments[0]?.method }),
       });
@@ -350,9 +351,10 @@ function NewTrade({ onDone }) {
 
           <div className="binder-line">
             <span className="hint">Binder cards</span>
-            <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
               <label className="field">How many<input type="number" min="0" step="1" placeholder="0" value={theirBinder.count} onChange={(e) => setTheirBinder({ ...theirBinder, count: e.target.value })} /></label>
-              <label className="field">We take them in at<input type="number" min="0" step="0.01" placeholder="0.00" value={theirBinder.value} onChange={(e) => setTheirBinder({ ...theirBinder, value: e.target.value })} /></label>
+              <label className="field">Market value<input type="number" min="0" step="0.01" placeholder="0.00" value={theirBinder.market} onChange={(e) => setTheirBinder({ ...theirBinder, market: e.target.value, value: theirBinder.valueTouched ? theirBinder.value : autoValue(e.target.value) })} /></label>
+              <label className="field">We take them in at<input type="number" min="0" step="0.01" placeholder="0.00" value={theirBinder.value} onChange={(e) => setTheirBinder({ ...theirBinder, value: e.target.value, valueTouched: true })} /></label>
             </div>
           </div>
         </div>

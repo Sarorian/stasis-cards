@@ -121,7 +121,7 @@ function SinglesForm() {
 }
 
 function BinderBuyForm() {
-  const [f, setF] = useState({ date: today(), count: '', amount: '', method: 'Cash' });
+  const [f, setF] = useState({ date: today(), count: '', market: '', amount: '', method: 'Cash' });
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
@@ -133,11 +133,12 @@ function BinderBuyForm() {
   async function submit(e) {
     e.preventDefault();
     if (!(Number(f.count) > 0)) return setError('Enter how many binder cards you bought.');
+    if (!(Number(f.market) > 0)) return setError('Enter what the cards are worth at market.');
     if (!(Number(f.amount) > 0)) return setError('Enter what you paid in total.');
     try {
-      await api.binderBuy({ ...f, count: Number(f.count), amount: Number(f.amount) });
-      setOk(`Added ${f.count} binder cards for ${money(f.amount)}.`);
-      setF({ date: today(), count: '', amount: '', method: f.method });
+      await api.binderBuy({ ...f, count: Number(f.count), market: Number(f.market), amount: Number(f.amount) });
+      setOk(`Added ${f.count} binder cards worth ${money(f.market)} for ${money(f.amount)}.`);
+      setF({ date: today(), count: '', market: '', amount: '', method: f.method });
       load();
     } catch (err) {
       setError(err.message);
@@ -159,18 +160,23 @@ function BinderBuyForm() {
       <form className="panel" onSubmit={submit}>
         <div className="panel-head">
           <h2>Binder purchase</h2>
-          {data && <span className="hint">{data.pool.count} in stock · avg {money(data.pool.avgCost)} each</span>}
+          {data && <span className="hint">{data.pool.count} in stock · worth ~{money(data.pool.value)} · paid {money(data.pool.cost)}</span>}
         </div>
-        <div className="form-row" style={{ gridTemplateColumns: '1.1fr 1fr 1fr 1fr auto' }}>
+        <div className="form-row" style={{ gridTemplateColumns: '1.1fr 1fr 1fr 1fr 1fr auto' }}>
           <label className="field">Date<input type="date" value={f.date} onChange={set('date')} /></label>
           <label className="field">Number of cards<input type="number" min="1" step="1" placeholder="100" value={f.count} onChange={set('count')} /></label>
+          <label className="field">Market value<input type="number" min="0" step="0.01" placeholder="190.00" value={f.market} onChange={set('market')} /></label>
           <label className="field">Total paid<input type="number" min="0" step="0.01" placeholder="150.00" value={f.amount} onChange={set('amount')} /></label>
           <label className="field">Paid from
             <select value={f.method} onChange={set('method')}>{WALLETS.map((w) => <option key={w}>{w}</option>)}</select>
           </label>
           <button className="primary">Save</button>
         </div>
-        {f.count > 0 && f.amount > 0 && <div className="hint" style={{ marginTop: 6 }}>{money(f.amount / f.count)} per card</div>}
+        {f.count > 0 && f.amount > 0 && (
+          <div className="hint" style={{ marginTop: 6 }}>
+            {money(f.amount / f.count)} per card{Number(f.market) > 0 ? ` · ${Math.round((f.amount / f.market) * 1000) / 10}% of market` : ''}
+          </div>
+        )}
         {error && <div className="error">{error}</div>}
         {ok && <div className="faint pos" style={{ marginTop: 6 }}>{ok}</div>}
       </form>
@@ -179,13 +185,14 @@ function BinderBuyForm() {
         <div className="panel">
           <div className="panel-head"><h2>Binder history</h2></div>
           <table className="simple">
-            <thead><tr><th>Date</th><th>Type</th><th className="num">Cards</th><th className="num">Amount</th><th>Wallet</th><th /></tr></thead>
+            <thead><tr><th>Date</th><th>Type</th><th className="num">Cards</th><th className="num">Market</th><th className="num">Amount</th><th>Wallet</th><th /></tr></thead>
             <tbody>
               {data.entries.map((e) => (
                 <tr key={e._id}>
                   <td>{fmtDate(e.date)}</td>
                   <td>{e.type === 'buy' ? 'Bought' : 'Sold'}</td>
                   <td className="num">{e.count}</td>
+                  <td className="num faint">{e.type === 'buy' ? (e.market != null ? money(e.market) : '—') : ''}</td>
                   <td className={`num ${e.type === 'sell' ? 'pos' : ''}`}>{money(e.amount)}</td>
                   <td>{e.method}</td>
                   <td className="num"><button className="small ghost danger" onClick={() => remove(e)} aria-label="Delete entry">✕</button></td>

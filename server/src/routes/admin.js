@@ -11,7 +11,6 @@ r.get('/', ah(async (req, res) => {
   const s = await Settings.get();
   res.json({
     startingCapital: s.startingCapital,
-    binderPct: s.binderPct || 80,
     log: [...s.log].reverse(),
     wallets: await walletBalances(),
   });
@@ -42,18 +41,6 @@ r.put('/capital', ah(async (req, res) => {
 }));
 
 // Correct wallet balances to match real accounts: { balances: { Cash: 100, ... }, note? }
-// What % of market we pay for binder cards: { pct } e.g. 80. Binder value = cost ÷ pct%.
-r.put('/binder-pct', ah(async (req, res) => {
-  const pct = Number(req.body.pct);
-  if (!(pct > 0 && pct <= 100)) throw new HttpError(400, 'Use a percentage between 1 and 100 (e.g. 80).');
-  const s = await Settings.get();
-  const prev = s.binderPct || 80;
-  s.binderPct = Math.round(pct * 10) / 10;
-  s.log.push({ date: today(), text: `Binder cards bought at ${prev}% → ${s.binderPct}% of market` });
-  await s.save();
-  res.json({ binderPct: s.binderPct });
-}));
-
 r.put('/wallets', ah(async (req, res) => {
   const target = req.body.balances || {};
   const current = await walletBalances();

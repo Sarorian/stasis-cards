@@ -19,6 +19,5 @@ export function today() {
 
 export const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
-// Binder value from what was paid: we pay `pct`% of market for binder cards
-export const binderPctOf = (settings) => settings?.binderPct || 80;
-export const binderValueOf = (cost, pct) => round2(cost / ((pct || 80) / 100));
+// Binder buys saved before market values were entered count as bought at 80% of market
+export const binderMarketOf = (entry) => (entry.market != null ? entry.market : round2(entry.amount / 0.8));

@@ -61,6 +61,7 @@ export default function ManualPrices({ onSaved, onClose }) {
         Graded and below-NM cards come back here after every price update with their last price filled in: change it, or save it as-is if it's still right.
         Use the links to check recent sales. Clear a box to skip that card.
       </p>
+      <BinderValueBox onSaved={onSaved} />
       {shown.length === 0 && <p className="hint">Nothing waiting. 🎉</p>}
       <div className="mp-list">
         {shown.map((c) => {
@@ -100,5 +101,54 @@ export default function ManualPrices({ onSaved, onClose }) {
         <span className="hint">{msg || 'Saved prices stick until you change them; automatic updates won’t overwrite them.'}</span>
       </div>
     </div>
+  );
+}
+
+// Optional: the whole binder's market value, counted by hand card by card
+function BinderValueBox({ onSaved }) {
+  const [pool, setPool] = useState(null);
+  const [value, setValue] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = () => api.binder().then((d) => setPool(d.pool)).catch(() => {});
+  useEffect(() => { load(); }, []);
+  if (!pool || pool.count <= 0) return null;
+
+  async function save(e) {
+    e.preventDefault();
+    if (!(Number(value) >= 0) || value === '') return setMsg('Enter the binder\'s total market value.');
+    setBusy(true);
+    try {
+      const r = await api.setBinderValue(Number(value));
+      setMsg(`Binder now worth ${money(r.pool.value)}.`);
+      setPool(r.pool);
+      setValue('');
+      onSaved?.();
+    } catch (err) {
+      setMsg(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="mp-row binder-value" onSubmit={save}>
+      <span className="perf-logo binder-mark" aria-hidden="true">B</span>
+      <div className="mp-name">
+        <b>Binder <span className="faint">(optional)</span></b>
+        <span className="faint">{pool.count} cards · paid {money(pool.cost)}</span>
+        <span className="faint">If you've counted up the binder card by card, enter its total market value. Costs and sale profit don't change.</span>
+      </div>
+      <div className="mp-now faint">
+        now ~{money(pool.value)}<br />{pool.valuedAt ? `counted ${fmtDate(pool.valuedAt)}` : 'from buy estimates'}
+      </div>
+      <div className="bv-input" style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+        <label className="field mp-input">Binder market value
+          <input type="number" min="0" step="0.01" placeholder={pool.value.toFixed(2)} value={value} onChange={(e) => { setValue(e.target.value); setMsg(''); }} />
+        </label>
+        <button className="small" disabled={busy || value === ''}>Save</button>
+      </div>
+      {msg && <div className="hint" style={{ gridColumn: '1 / -1' }}>{msg}</div>}
+    </form>
   );
 }

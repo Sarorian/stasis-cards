@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import BinderEntry from '../models/BinderEntry.js';
+import Settings from '../models/Settings.js';
 import Transaction from '../models/Transaction.js';
 import { ah, HttpError, positive, checkWallet, binderPool } from '../util.js';
 import { today, round2 } from '../constants.js';
@@ -11,13 +12,14 @@ r.get('/', ah(async (req, res) => {
   res.json({ pool: await binderPool(), entries });
 }));
 
-// Buy binder cards: { count, amount, method, date? }
+// Buy binder cards: { count, market, amount, method, date? }  market = what they're worth, amount = what we paid
 r.post('/buy', ah(async (req, res) => {
   const count = Math.round(positive(req.body.count, 'Card count'));
+  const market = round2(positive(req.body.market, 'Market value'));
   const amount = positive(req.body.amount, 'Total paid');
   const method = checkWallet(req.body.method);
   const date = req.body.date || today();
-  const entry = await BinderEntry.create({ type: 'buy', date, count, amount, method, notes: req.body.notes });
+  const entry = await BinderEntry.create({ type: 'buy', date, count, amount, market, method, notes: req.body.notes });
   await Transaction.create({
     date, wallet: method, amount: -amount, kind: 'binder_buy', binderEntry: entry._id,
     note: `Bought ${count} binder cards`,
@@ -40,6 +42,19 @@ r.post('/sell', ah(async (req, res) => {
     note: `Sold ${count} binder cards`,
   });
   res.status(201).json({ entry, pool: await binderPool() });
+}));
+
+// Re-estimate the whole binder (counted by hand): { value, date? }
+r.put('/value', ah(async (req, res) => {
+  const value = Number(req.body.value);
+  if (!(value >= 0)) throw new HttpError(400, 'Enter the binder\'s market value.');
+  const before = await binderPool();
+  if (before.count <= 0) throw new HttpError(400, 'There are no binder cards to value.');
+  const s = await Settings.get();
+  s.binderValuations.push({ date: req.body.date || today(), value: round2(value), prev: before.value, at: new Date() });
+  s.log.push({ date: today(), text: `Binder re-estimated: $${before.value.toFixed(2)} → $${round2(value).toFixed(2)}` });
+  await s.save();
+  res.json({ pool: await binderPool() });
 }));
 
 r.delete('/:id', ah(async (req, res) => {

@@ -55,6 +55,7 @@ export const api = {
   binder: () => request('GET', '/binder'),
   binderBuy: (body) => request('POST', '/binder/buy', body),
   binderSell: (body) => request('POST', '/binder/sell', body),
+  setBinderValue: (value) => request('PUT', '/binder/value', { value }),
   deleteBinderEntry: (id) => request('DELETE', `/binder/${id}`),
 
   wallets: () => request('GET', '/wallets'),
@@ -95,5 +96,4 @@ export const api = {
   admin: () => request('GET', '/admin'),
   setCapital: (body) => request('PUT', '/admin/capital', body),
   setWallets: (body) => request('PUT', '/admin/wallets', body),
-  setBinderPct: (pct) => request('PUT', '/admin/binder-pct', { pct }),
 };

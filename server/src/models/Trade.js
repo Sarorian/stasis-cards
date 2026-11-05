@@ -27,6 +27,8 @@ const binderSideSchema = new mongoose.Schema(
   {
     count: { type: Number, min: 1 },
     value: Number,
+    // Their binder cards: what we decided they're worth at market (value = the credit we gave)
+    market: Number,
     entry: { type: mongoose.Schema.Types.ObjectId, ref: 'BinderEntry' },
   },
   { _id: false }

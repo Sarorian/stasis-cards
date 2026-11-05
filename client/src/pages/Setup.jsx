@@ -345,34 +345,40 @@ function NewCards({ startDate, onChange }) {
 
 function OpeningBinder({ info, onSaved }) {
   const current = info.openingBinder?.[0];
-  const pctPaid = info.binderPct || 80;
-  // Saved entries hold what was paid; show it back as market value
-  const currentMarket = current ? Math.round((current.amount / (pctPaid / 100)) * 100) / 100 : null;
-  const [f, setF] = useState({ count: current ? String(current.count) : '', value: current ? String(currentMarket) : '' });
+  // Older entries have no market value saved: treat them as bought at 80% of market
+  const currentMarket = current ? (current.market ?? Math.round((current.amount / 0.8) * 100) / 100) : null;
+  const [f, setF] = useState({
+    count: current ? String(current.count) : '', value: current ? String(currentMarket) : '', paid: current?.market != null ? String(current.amount) : '',
+  });
   const [msg, setMsg] = useState('');
+  const set = (k) => (e) => { setF({ ...f, [k]: e.target.value }); setMsg(''); };
   async function save(e) {
     e.preventDefault();
     if (!(Number(f.count) >= 1)) return setMsg('Enter how many binder cards you have.');
     try {
-      await api.setOpeningBinder({ count: Number(f.count), marketValue: Number(f.value) || 0 });
+      await api.setOpeningBinder({ count: Number(f.count), marketValue: Number(f.value) || 0, paid: f.paid === '' ? null : Number(f.paid) });
       setMsg('Saved.');
       onSaved();
     } catch (err) {
       setMsg(err.message);
     }
   }
-  const cost = Number(f.value) > 0 ? Math.round(Number(f.value) * pctPaid) / 100 : null;
+  const market = Number(f.value) || 0;
+  const paid = f.paid === '' ? Math.round(market * 80) / 100 : Number(f.paid);
   return (
     <form className="panel" onSubmit={save}>
       <div className="panel-head">
         <h2>4. Binder cards on hand</h2>
-        <span className="hint">{current ? `Set: ${current.count} cards · worth ${money(currentMarket)} · cost ${money(current.amount)}` : 'Optional, you can do this later'}</span>
+        <span className="hint">{current ? `Set: ${current.count} cards · worth ${money(currentMarket)} · paid ${money(current.amount)}` : 'Optional, you can do this later'}</span>
       </div>
-      <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr auto 2fr' }}>
-        <label className="field">How many<input type="number" min="1" step="1" value={f.count} onChange={(e) => { setF({ ...f, count: e.target.value }); setMsg(''); }} /></label>
-        <label className="field">Market value (total)<input type="number" min="0" step="0.01" value={f.value} onChange={(e) => { setF({ ...f, value: e.target.value }); setMsg(''); }} /></label>
+      <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr auto 2fr' }}>
+        <label className="field">How many<input type="number" min="1" step="1" value={f.count} onChange={set('count')} /></label>
+        <label className="field">Market value (total)<input type="number" min="0" step="0.01" value={f.value} onChange={set('value')} /></label>
+        <label className="field">What you paid<input type="number" min="0" step="0.01" placeholder={market > 0 ? (market * 0.8).toFixed(2) : '80% of market'} value={f.paid} onChange={set('paid')} /></label>
         <button className="primary">{current ? 'Update' : 'Save'}</button>
-        <span className="hint">{msg || (cost !== null ? `Recorded as costing ${money(cost)} (the ${pctPaid}% of market you pay for binder cards). It shows at ${money(Number(f.value))}.` : `What the binder cards are worth now. The cost is recorded as ${pctPaid}% of it.`)}</span>
+        <span className="hint">{msg || (market > 0
+          ? `Counts as worth ${money(market)}, paid ${money(paid)}${f.paid === '' ? ' (80% of market; enter the real number if you know it)' : ''}. Binder sale profit uses what you paid.`
+          : 'What the binder is worth now, and what you paid for it (leave blank for 80% of market).')}</span>
       </div>
     </form>
   );

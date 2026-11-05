@@ -16,9 +16,9 @@ const settingsSchema = new mongoose.Schema(
     pricesUpdatedAt: Date,
     // When the last "Update market prices" run started (graded cards priced before this get asked again)
     pricesUpdateStartedAt: Date,
-    // Binder cards aren't priced one by one: we pay this % of market for them,
-    // so the binder's value is its cost ÷ (binderPct / 100) (set on Admin)
-    binderPct: { type: Number, default: 80 },
+    // Binder re-estimates: "the whole binder is worth $X now" (counted by hand, entered with price updates).
+    // The binder's value is the latest one, plus buys' market values and minus sale prices since then.
+    binderValuations: [{ date: String, value: Number, prev: Number, at: { type: Date, default: Date.now } }],
     // The day the app's numbers start (everything before is "Year 1" from the old system)
     startDate: { type: String, default: null },
     // Summary of the old system's records, shown separately on the Dashboard

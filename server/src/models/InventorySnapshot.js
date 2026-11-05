@@ -10,7 +10,7 @@ const inventorySnapshotSchema = new mongoose.Schema(
       cost: { type: Number, default: 0 }, // what they cost us
     },
     binderCost: { type: Number, default: 0 },
-    binderValue: { type: Number, default: null }, // binder cost ÷ % of market paid, at the time
+    binderValue: { type: Number, default: null }, // binder's estimated market value at the time
     sealedCost: { type: Number, default: 0 },
   },
   { timestamps: true }

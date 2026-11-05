@@ -1,6 +1,7 @@
 import Transaction from './models/Transaction.js';
 import BinderEntry from './models/BinderEntry.js';
-import { WALLETS, round2 } from './constants.js';
+import Settings from './models/Settings.js';
+import { WALLETS, round2, binderMarketOf } from './constants.js';
 
 // Wraps async route handlers so thrown errors reach the error middleware
 export const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -68,18 +69,34 @@ export async function walletBalances() {
   return balances;
 }
 
+/*
+  The binder pool.
+    cost: what we paid for the cards still in it (each sale removes the average cost per card)
+    value: estimated market value. Starts from the latest hand-counted re-estimate (if any),
+           adds each later buy's market value and takes off each later sale's price.
+*/
 export async function binderPool() {
-  const entries = await BinderEntry.find().lean();
+  const [entries, settings] = await Promise.all([BinderEntry.find().lean(), Settings.get()]);
+  const vals = settings.binderValuations || [];
+  const latest = vals.length ? vals.reduce((a, v) => (new Date(v.at) > new Date(a.at) ? v : a)) : null;
   let count = 0;
   let cost = 0;
+  let value = latest ? latest.value : 0;
   for (const e of entries) {
+    const afterValuation = !latest || new Date(e.createdAt) > new Date(latest.at);
     if (e.type === 'buy') {
       count += e.count;
       cost += e.amount;
+      if (afterValuation) value += binderMarketOf(e);
     } else {
       count -= e.count;
       cost -= e.costBasis;
+      if (afterValuation) value -= e.amount;
     }
   }
-  return { count, cost: round2(Math.max(cost, 0)), avgCost: count > 0 ? round2(cost / count) : 0 };
+  return {
+    count, cost: round2(Math.max(cost, 0)), avgCost: count > 0 ? round2(cost / count) : 0,
+    value: count > 0 ? round2(Math.max(value, 0)) : 0,
+    valuedAt: latest ? latest.date : null, valuedAs: latest ? latest.value : null,
+  };
 }
