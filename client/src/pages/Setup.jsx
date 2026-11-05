@@ -345,31 +345,34 @@ function NewCards({ startDate, onChange }) {
 
 function OpeningBinder({ info, onSaved }) {
   const current = info.openingBinder?.[0];
-  const [f, setF] = useState({ count: current ? String(current.count) : '', value: current ? String(current.amount) : '' });
+  const pctPaid = info.binderPct || 80;
+  // Saved entries hold what was paid; show it back as market value
+  const currentMarket = current ? Math.round((current.amount / (pctPaid / 100)) * 100) / 100 : null;
+  const [f, setF] = useState({ count: current ? String(current.count) : '', value: current ? String(currentMarket) : '' });
   const [msg, setMsg] = useState('');
   async function save(e) {
     e.preventDefault();
     if (!(Number(f.count) >= 1)) return setMsg('Enter how many binder cards you have.');
     try {
-      await api.setOpeningBinder({ count: Number(f.count), value: Number(f.value) || 0 });
+      await api.setOpeningBinder({ count: Number(f.count), marketValue: Number(f.value) || 0 });
       setMsg('Saved.');
       onSaved();
     } catch (err) {
       setMsg(err.message);
     }
   }
-  const per = Number(f.count) > 0 && Number(f.value) > 0 ? Number(f.value) / Number(f.count) : null;
+  const cost = Number(f.value) > 0 ? Math.round(Number(f.value) * pctPaid) / 100 : null;
   return (
     <form className="panel" onSubmit={save}>
       <div className="panel-head">
         <h2>4. Binder cards on hand</h2>
-        <span className="hint">{current ? `Set: ${current.count} cards · ${money(current.amount)}` : 'Optional, you can do this later'}</span>
+        <span className="hint">{current ? `Set: ${current.count} cards · worth ${money(currentMarket)} · cost ${money(current.amount)}` : 'Optional, you can do this later'}</span>
       </div>
       <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr auto 2fr' }}>
         <label className="field">How many<input type="number" min="1" step="1" value={f.count} onChange={(e) => { setF({ ...f, count: e.target.value }); setMsg(''); }} /></label>
-        <label className="field">Total value<input type="number" min="0" step="0.01" value={f.value} onChange={(e) => { setF({ ...f, value: e.target.value }); setMsg(''); }} /></label>
+        <label className="field">Market value (total)<input type="number" min="0" step="0.01" value={f.value} onChange={(e) => { setF({ ...f, value: e.target.value }); setMsg(''); }} /></label>
         <button className="primary">{current ? 'Update' : 'Save'}</button>
-        <span className="hint">{msg || (per !== null ? `${money(per)} per card. This becomes the binder pool's starting cost.` : 'This becomes the binder pool’s starting cost.')}</span>
+        <span className="hint">{msg || (cost !== null ? `Recorded as costing ${money(cost)} (the ${pctPaid}% of market you pay for binder cards). It shows at ${money(Number(f.value))}.` : `What the binder cards are worth now. The cost is recorded as ${pctPaid}% of it.`)}</span>
       </div>
     </form>
   );

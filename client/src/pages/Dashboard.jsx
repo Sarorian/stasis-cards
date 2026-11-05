@@ -51,7 +51,7 @@ export default function Dashboard() {
           sub={`${money(s.liquid)} wallets + ${money(s.inventory.market)} cards + ${money(s.binderValue)} binder${s.miscStats?.inStock?.cost ? ` + ${money(s.miscStats.inStock.cost)} sealed` : ''}${s.debt.total > 0 ? ` − ${money(s.debt.total)} debt` : ''}`} />
         <StatCard label="Liquid" value={money(s.liquid)} sub={`${money(s.cash)} cash · ${money(s.digital)} digital`} />
         <StatCard label="Inventory at market" value={money(s.inventoryTotal.market)}
-          sub={`${s.inventory.count} card${s.inventory.count === 1 ? '' : 's'} ${money(s.inventory.market)} + binder ${money(s.binderValue)} (cost × ${s.binderMarkup})`} />
+          sub={`${s.inventory.count} card${s.inventory.count === 1 ? '' : 's'} ${money(s.inventory.market)} + binder ${money(s.binderValue)}`} />
         <Link to="/debt" className="stat-link">
           <StatCard label="Debt owed" value={money(s.debt.total)} tone={s.debt.total > 0 ? 'neg' : ''} sub={s.debt.people.map((p) => `${p.person} ${money(p.owed)}`).join(' · ')} />
         </Link>

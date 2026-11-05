@@ -11,7 +11,7 @@ r.get('/', ah(async (req, res) => {
   const s = await Settings.get();
   res.json({
     startingCapital: s.startingCapital,
-    binderMarkup: s.binderMarkup ?? 1.2,
+    binderPct: s.binderPct || 80,
     log: [...s.log].reverse(),
     wallets: await walletBalances(),
   });
@@ -42,16 +42,16 @@ r.put('/capital', ah(async (req, res) => {
 }));
 
 // Correct wallet balances to match real accounts: { balances: { Cash: 100, ... }, note? }
-// How binder cards are valued: pool cost x markup. { markup } e.g. 1.2 or 1.25
-r.put('/binder-markup', ah(async (req, res) => {
-  const markup = Number(req.body.markup);
-  if (!(markup >= 1 && markup <= 5)) throw new HttpError(400, 'Use a multiplier between 1 and 5 (e.g. 1.2).');
+// What % of market we pay for binder cards: { pct } e.g. 80. Binder value = cost ÷ pct%.
+r.put('/binder-pct', ah(async (req, res) => {
+  const pct = Number(req.body.pct);
+  if (!(pct > 0 && pct <= 100)) throw new HttpError(400, 'Use a percentage between 1 and 100 (e.g. 80).');
   const s = await Settings.get();
-  const prev = s.binderMarkup ?? 1.2;
-  s.binderMarkup = Math.round(markup * 1000) / 1000;
-  s.log.push({ date: today(), text: `Binder value multiplier ${prev} → ${s.binderMarkup}` });
+  const prev = s.binderPct || 80;
+  s.binderPct = Math.round(pct * 10) / 10;
+  s.log.push({ date: today(), text: `Binder cards bought at ${prev}% → ${s.binderPct}% of market` });
   await s.save();
-  res.json({ binderMarkup: s.binderMarkup });
+  res.json({ binderPct: s.binderPct });
 }));
 
 r.put('/wallets', ah(async (req, res) => {

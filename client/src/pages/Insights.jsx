@@ -33,7 +33,7 @@ export default function Insights() {
         <StatCard label="Unrealized gain" value={money(s.inventoryTotal.unrealized)} tone={tone(s.inventoryTotal.unrealized)}
           sub={`${pct(s.inventoryTotal.unrealizedPct)} · cards ${money(s.inventory.unrealized)} + binder ${money(s.binderValue - s.binder.cost)}`} />
         <StatCard label="Expenses" value={money(s.expenses)} sub="paid by Owen/Ben (shows, gas, food)" />
-        <StatCard label="Binder cards" value={s.binder.count} sub={`worth ~${money(s.binderValue)} · cost ${money(s.binder.cost)} × ${s.binderMarkup}`} />
+        <StatCard label="Binder cards" value={s.binder.count} sub={`worth ~${money(s.binderValue)} · cost ${money(s.binder.cost)} (${s.binderPct}% of market)`} />
         <StatCard label="Avg days to sell" value={s.avgDaysToSell ?? '—'} />
         <StatCard label="Avg % of market paid" value={s.avgPctOfMarketPaid !== null ? `${s.avgPctOfMarketPaid}%` : '—'} sub="cards in stock" />
         <StatCard label="Best flip" value={s.bestFlip ? money(s.bestFlip.profit) : '—'} tone={tone(s.bestFlip?.profit)} sub={s.bestFlip?.name} />

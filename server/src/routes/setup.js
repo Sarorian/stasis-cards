@@ -2,8 +2,9 @@ import { Router } from 'express';
 import Card from '../models/Card.js';
 import BinderEntry from '../models/BinderEntry.js';
 import Settings from '../models/Settings.js';
+import InventorySnapshot from '../models/InventorySnapshot.js';
 import { ah, HttpError, positive } from '../util.js';
-import { today, round2, GAMES, CONDITIONS, GRADERS } from '../constants.js';
+import { today, round2, binderPctOf, binderValueOf, GAMES, CONDITIONS, GRADERS } from '../constants.js';
 
 /*
   One-time setup for moving off the old system:
@@ -22,7 +23,7 @@ r.get('/', ah(async (req, res) => {
     Card.countDocuments({ opening: true }),
     BinderEntry.find({ method: 'Opening' }).lean(),
   ]);
-  res.json({ startDate: s.startDate, yearOne: s.yearOne, importedOldIds, openingCount, openingBinder });
+  res.json({ startDate: s.startDate, yearOne: s.yearOne, importedOldIds, openingCount, openingBinder, binderPct: binderPctOf(s) });
 }));
 
 r.put('/start-date', ah(async (req, res) => {
@@ -119,13 +120,30 @@ r.delete('/cards/:id', ah(async (req, res) => {
 
 // Binder cards already owned on the start date: { count, value, date? }. Replaces any earlier opening entry.
 r.put('/binder', ah(async (req, res) => {
+  // { count, marketValue }: the binder's current market value. It's recorded at what we'd
+  // have paid for it (binderPct% of market, 80% by default), so it shows back at full market value.
   const count = Math.round(positive(req.body.count, 'Binder card count'));
-  const value = round2(Number(req.body.value) || 0);
-  if (value < 0) throw new HttpError(400, 'Value must be 0 or more.');
+  const marketValue = round2(Number(req.body.marketValue) || 0);
+  if (marketValue < 0) throw new HttpError(400, 'Market value must be 0 or more.');
   const s = await Settings.get();
+  const pct = binderPctOf(s);
+  const cost = round2(marketValue * pct / 100);
+  const old = await BinderEntry.find({ method: 'Opening' }).lean();
+  const oldCost = round2(old.reduce((a, e) => a + e.amount, 0));
   await BinderEntry.deleteMany({ method: 'Opening' });
+  // The opening binder was there from the start, so fix the saved daily inventory values too
+  const diff = round2(cost - oldCost);
+  if (diff !== 0) {
+    const snaps = await InventorySnapshot.find({ binderCost: { $ne: null } });
+    for (const snap of snaps) {
+      snap.binderCost = round2(Math.max(0, (snap.binderCost || 0) + diff));
+      snap.binderValue = binderValueOf(snap.binderCost, pct);
+      await snap.save();
+    }
+  }
   const entry = await BinderEntry.create({
-    type: 'buy', date: req.body.date || s.startDate || today(), count, amount: value, method: 'Opening', notes: 'Binder cards on hand at start',
+    type: 'buy', date: req.body.date || s.startDate || today(), count, amount: cost, method: 'Opening',
+    notes: `Binder cards on hand at start · market ${marketValue.toFixed(2)} at ${pct}%`,
   });
   res.json({ entry });
 }));

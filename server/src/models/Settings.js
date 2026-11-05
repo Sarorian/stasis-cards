@@ -16,8 +16,9 @@ const settingsSchema = new mongoose.Schema(
     pricesUpdatedAt: Date,
     // When the last "Update market prices" run started (graded cards priced before this get asked again)
     pricesUpdateStartedAt: Date,
-    // Binder cards aren't priced one by one: their value is the pool's cost times this (set on Admin)
-    binderMarkup: { type: Number, default: 1.2 },
+    // Binder cards aren't priced one by one: we pay this % of market for them,
+    // so the binder's value is its cost ÷ (binderPct / 100) (set on Admin)
+    binderPct: { type: Number, default: 80 },
     // The day the app's numbers start (everything before is "Year 1" from the old system)
     startDate: { type: String, default: null },
     // Summary of the old system's records, shown separately on the Dashboard

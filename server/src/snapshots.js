@@ -4,7 +4,7 @@ import MiscEntry from './models/MiscEntry.js';
 import InventorySnapshot from './models/InventorySnapshot.js';
 import Settings from './models/Settings.js';
 import { binderPool } from './util.js';
-import { today, round2 } from './constants.js';
+import { today, round2, binderPctOf, binderValueOf } from './constants.js';
 
 /*
   Save (or refresh) today's inventory value. Pass numbers you already have to skip the queries.
@@ -27,7 +27,7 @@ export async function recordSnapshot(values) {
       market: round2(inStock.reduce((a, c) => a + (c.market?.price || 0), 0)),
       cost: round2(inStock.reduce((a, c) => a + (c.cost || 0), 0)),
       binderCost: pool.cost,
-      binderValue: round2(pool.cost * (settings.binderMarkup ?? 1.2)),
+      binderValue: binderValueOf(pool.cost, binderPctOf(settings)),
       sealedCost: round2(items.reduce((a, i) => a + (i.cost - (usedCost.get(String(i._id)) || 0)), 0)),
     };
   }
@@ -45,7 +45,7 @@ export async function snapshotHistory(days = 366) {
   // market/cost = cards + binder (binder at its estimated value), the same way the Dashboard counts inventory
   return rows.map((r) => {
     const binderCost = r.binderCost || 0;
-    const binderValue = r.binderValue ?? round2(binderCost * 1.2);
+    const binderValue = r.binderValue ?? binderValueOf(binderCost, 80);
     return {
       date: r.date, count: r.cards?.count || 0,
       market: round2((r.cards?.market || 0) + binderValue), cost: round2((r.cards?.cost || 0) + binderCost),
