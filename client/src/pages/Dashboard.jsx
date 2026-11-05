@@ -48,9 +48,10 @@ export default function Dashboard() {
         <StatCard hero label="ROI" value={pct(s.roiPct)} tone={tone(s.roiPct)} sub={s.totalSpent > 0 ? `made vs ${money(s.totalSpent)} spent` : 'buy something to see ROI'} />
         <StatCard hero label="Net profit" value={money(s.profit)} tone={tone(s.profit)} sub={s.expenses > 0 ? `after ${money(s.expenses)} expenses` : `${pct(s.marginPct)} margin on cost`} />
         <StatCard hero label="Net worth" value={money(s.netWorth)}
-          sub={`${money(s.liquid)} wallets + ${money(s.inventory.market)} cards + ${money((s.binder?.cost || 0) + (s.miscStats?.inStock?.cost || 0))} binder/sealed${s.debt.total > 0 ? ` − ${money(s.debt.total)} debt` : ''}`} />
+          sub={`${money(s.liquid)} wallets + ${money(s.inventory.market)} cards + ${money(s.binderValue)} binder${s.miscStats?.inStock?.cost ? ` + ${money(s.miscStats.inStock.cost)} sealed` : ''}${s.debt.total > 0 ? ` − ${money(s.debt.total)} debt` : ''}`} />
         <StatCard label="Liquid" value={money(s.liquid)} sub={`${money(s.cash)} cash · ${money(s.digital)} digital`} />
-        <StatCard label="Inventory at market" value={money(s.inventory.market)} sub={`${s.inventory.count} cards · cost ${money(s.inventory.cost)}`} />
+        <StatCard label="Inventory at market" value={money(s.inventoryTotal.market)}
+          sub={`${s.inventory.count} card${s.inventory.count === 1 ? '' : 's'} ${money(s.inventory.market)} + binder ${money(s.binderValue)} (cost × ${s.binderMarkup})`} />
         <Link to="/debt" className="stat-link">
           <StatCard label="Debt owed" value={money(s.debt.total)} tone={s.debt.total > 0 ? 'neg' : ''} sub={s.debt.people.map((p) => `${p.person} ${money(p.owed)}`).join(' · ')} />
         </Link>

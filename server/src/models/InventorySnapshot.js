@@ -6,10 +6,11 @@ const inventorySnapshotSchema = new mongoose.Schema(
     date: { type: String, required: true, unique: true, match: /^\d{4}-\d{2}-\d{2}$/ },
     cards: {
       count: { type: Number, default: 0 },
-      market: { type: Number, default: 0 }, // market value of in-stock singles and slabs
+      market: { type: Number, default: 0 }, // market value of in-stock singles and slabs (binder is separate)
       cost: { type: Number, default: 0 }, // what they cost us
     },
     binderCost: { type: Number, default: 0 },
+    binderValue: { type: Number, default: null }, // binder cost x markup at the time
     sealedCost: { type: Number, default: 0 },
   },
   { timestamps: true }

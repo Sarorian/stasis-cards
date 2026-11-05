@@ -87,7 +87,10 @@ r.get('/', ah(async (req, res) => {
   const liquid = round2(WALLETS.reduce((a, w) => a + wallets[w], 0));
   const digital = round2(liquid - wallets.Cash);
   const miscLeftCost = round2(miscItems.reduce((a, i) => a + i.remainingCost, 0));
-  const netWorth = round2(liquid + inventoryMarket + pool.cost + miscLeftCost - debtTotal);
+  // Binder cards count at their estimated value: pool cost x markup (Admin setting, default 1.2)
+  const binderMarkup = settings.binderMarkup ?? 1.2;
+  const binderValue = round2(pool.cost * binderMarkup);
+  const netWorth = round2(liquid + inventoryMarket + binderValue + miscLeftCost - debtTotal);
   const capital = settings.startingCapital;
   const totalSpent = round2(
     cards.reduce((a, c) => a + (c.cost || 0), 0) +
@@ -209,6 +212,8 @@ r.get('/', ah(async (req, res) => {
     tradedIn: bBuys.filter((e) => e.method === 'Trade').reduce((a, e) => a + e.count, 0),
     tradedOut: bSells.filter((e) => e.method === 'Trade').reduce((a, e) => a + e.count, 0),
     pool,
+    value: round2(pool.cost * (settings.binderMarkup ?? 1.2)),
+    markup: settings.binderMarkup ?? 1.2,
   };
 
   // ---- Sealed & misc performance ----
@@ -265,7 +270,7 @@ r.get('/', ah(async (req, res) => {
     .sort((a, b) => b.roiPct - a.roiPct);
 
   // Keep today's inventory value saved, then send the history for the chart
-  await recordSnapshot({ count: inStock.length, market: inventoryMarket, cost: inventoryCost, binderCost: pool.cost, sealedCost: miscLeftCost }).catch(() => {});
+  await recordSnapshot({ count: inStock.length, market: inventoryMarket, cost: inventoryCost, binderCost: pool.cost, binderValue, sealedCost: miscLeftCost }).catch(() => {});
   const inventoryHistory = await snapshotHistory();
 
   res.json({
@@ -276,7 +281,17 @@ r.get('/', ah(async (req, res) => {
     yearOne: settings.yearOne,
     openingCards: inStock.filter((c) => c.opening).length,
     // ROI = what we've made (realized + unrealized) vs everything we've spent on cards and binder lots
-    roiPct: pct(profit + inventoryMarket - inventoryCost, totalSpent),
+    // realized profit + unrealized gain (cards, plus the binder's estimated gain) vs everything spent
+    roiPct: pct(profit + (inventoryMarket - inventoryCost) + (binderValue - pool.cost), totalSpent),
+    binderValue,
+    binderMarkup,
+    // Inventory including the binder at its estimated value
+    inventoryTotal: {
+      market: round2(inventoryMarket + binderValue),
+      cost: round2(inventoryCost + pool.cost),
+      unrealized: round2(inventoryMarket - inventoryCost + binderValue - pool.cost),
+      unrealizedPct: pct(inventoryMarket - inventoryCost + binderValue - pool.cost, inventoryCost + pool.cost),
+    },
     totalSpent,
     netWorth,
     liquid,

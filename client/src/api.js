@@ -95,4 +95,5 @@ export const api = {
   admin: () => request('GET', '/admin'),
   setCapital: (body) => request('PUT', '/admin/capital', body),
   setWallets: (body) => request('PUT', '/admin/wallets', body),
+  setBinderMarkup: (markup) => request('PUT', '/admin/binder-markup', { markup }),
 };

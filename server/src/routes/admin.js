@@ -11,6 +11,7 @@ r.get('/', ah(async (req, res) => {
   const s = await Settings.get();
   res.json({
     startingCapital: s.startingCapital,
+    binderMarkup: s.binderMarkup ?? 1.2,
     log: [...s.log].reverse(),
     wallets: await walletBalances(),
   });
@@ -41,6 +42,18 @@ r.put('/capital', ah(async (req, res) => {
 }));
 
 // Correct wallet balances to match real accounts: { balances: { Cash: 100, ... }, note? }
+// How binder cards are valued: pool cost x markup. { markup } e.g. 1.2 or 1.25
+r.put('/binder-markup', ah(async (req, res) => {
+  const markup = Number(req.body.markup);
+  if (!(markup >= 1 && markup <= 5)) throw new HttpError(400, 'Use a multiplier between 1 and 5 (e.g. 1.2).');
+  const s = await Settings.get();
+  const prev = s.binderMarkup ?? 1.2;
+  s.binderMarkup = Math.round(markup * 1000) / 1000;
+  s.log.push({ date: today(), text: `Binder value multiplier ${prev} → ${s.binderMarkup}` });
+  await s.save();
+  res.json({ binderMarkup: s.binderMarkup });
+}));
+
 r.put('/wallets', ah(async (req, res) => {
   const target = req.body.balances || {};
   const current = await walletBalances();

@@ -27,6 +27,7 @@ export default function Admin() {
       <div className="page-head"><h1>Admin</h1><Link to="/setup" className="btn">Starting setup (old system, starting inventory)</Link></div>
       <CapitalForm data={data} onSaved={load} />
       <WalletForm data={data} onSaved={load} />
+      <BinderMarkupForm data={data} onSaved={load} />
 
       <div className="panel">
         <div className="panel-head"><h2>Change log</h2></div>
@@ -105,6 +106,38 @@ function CapitalForm({ data, onSaved }) {
       </div>
       {error && <div className="error">{error}</div>}
       {ok && <div className="faint pos" style={{ marginTop: 6 }}>{ok}</div>}
+    </form>
+  );
+}
+
+// Binder cards aren't priced one by one: they're valued at the pool's cost times this
+function BinderMarkupForm({ data, onSaved }) {
+  const [value, setValue] = useState(String(data.binderMarkup ?? 1.2));
+  const [msg, setMsg] = useState('');
+  const n = Number(value);
+  async function save(e) {
+    e.preventDefault();
+    try {
+      await api.setBinderMarkup(n);
+      setMsg('Saved.');
+      onSaved();
+    } catch (err) {
+      setMsg(err.message);
+    }
+  }
+  return (
+    <form className="panel" onSubmit={save}>
+      <div className="panel-head">
+        <h2>Binder value</h2>
+        <span className="hint">Binder cards count as their cost × this, in inventory, net worth and ROI</span>
+      </div>
+      <div className="form-row" style={{ gridTemplateColumns: 'minmax(120px, 180px) auto 1fr' }}>
+        <label className="field">Multiplier<input type="number" min="1" max="5" step="0.01" value={value} onChange={(e) => { setValue(e.target.value); setMsg(''); }} /></label>
+        <button className="primary">Save</button>
+        <span className="hint">
+          {msg || (n >= 1 ? `Same as buying binder cards at ${Math.round((1 / n) * 1000) / 10}% of market. (1.25 = 80%, 1.2 ≈ 83%)` : '')}
+        </span>
+      </div>
     </form>
   );
 }

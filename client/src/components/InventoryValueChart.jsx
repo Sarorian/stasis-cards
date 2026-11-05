@@ -34,7 +34,7 @@ export default function InventoryValueChart({ history }) {
     <TrendChart
       points={points}
       series={SERIES}
-      note={`cards in stock · saved daily since ${fmtDate(history[0]?.date)}`}
+      note={`cards in stock + binder (est.) · saved daily since ${fmtDate(history[0]?.date)}`}
       isEmpty={points.length < 2}
       emptyText="The line starts filling in from tomorrow. Today's value is saved."
       tableRows={rows}

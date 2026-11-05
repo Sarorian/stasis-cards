@@ -76,6 +76,7 @@ function BinderCard({ b }) {
           <Row label="Sell-through">{b.sellThroughPct !== null ? `${b.sellThroughPct}%` : '—'}</Row>
           {b.sellThroughPct !== null && <div className="progress" style={{ marginTop: -2, marginBottom: 6 }}><div style={{ width: `${Math.min(b.sellThroughPct, 100)}%` }} /></div>}
           <Row label="In the pool">{b.pool.count} <span className="faint">· cost {money(b.pool.cost)} · {money(b.pool.avgCost)} each</span></Row>
+          {b.value !== undefined && <Row label="Estimated value">{money(b.value)} <span className="faint">· cost × {b.markup}</span></Row>}
           {(b.tradedIn > 0 || b.tradedOut > 0) && <Row label="Via trades">{b.tradedIn} in · {b.tradedOut} out</Row>}
         </>
       )}

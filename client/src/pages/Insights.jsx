@@ -30,9 +30,10 @@ export default function Insights() {
 
       <div className="grid stats">
         <StatCard label="Revenue" value={money(s.revenue)} sub={`${s.soldCount} sales${s.fees ? ` · ${money(s.fees)} fees` : ''}`} />
-        <StatCard label="Unrealized gain" value={money(s.inventory.unrealized)} tone={tone(s.inventory.unrealized)} sub={pct(s.inventory.unrealizedPct)} />
+        <StatCard label="Unrealized gain" value={money(s.inventoryTotal.unrealized)} tone={tone(s.inventoryTotal.unrealized)}
+          sub={`${pct(s.inventoryTotal.unrealizedPct)} · cards ${money(s.inventory.unrealized)} + binder ${money(s.binderValue - s.binder.cost)}`} />
         <StatCard label="Expenses" value={money(s.expenses)} sub="paid by Owen/Ben (shows, gas, food)" />
-        <StatCard label="Binder cards" value={s.binder.count} sub={`cost ${money(s.binder.cost)} · ${money(s.binder.avgCost)} each`} />
+        <StatCard label="Binder cards" value={s.binder.count} sub={`worth ~${money(s.binderValue)} · cost ${money(s.binder.cost)} × ${s.binderMarkup}`} />
         <StatCard label="Avg days to sell" value={s.avgDaysToSell ?? '—'} />
         <StatCard label="Avg % of market paid" value={s.avgPctOfMarketPaid !== null ? `${s.avgPctOfMarketPaid}%` : '—'} sub="cards in stock" />
         <StatCard label="Best flip" value={s.bestFlip ? money(s.bestFlip.profit) : '—'} tone={tone(s.bestFlip?.profit)} sub={s.bestFlip?.name} />
