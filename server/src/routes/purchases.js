@@ -151,6 +151,8 @@ r.delete('/:id', ah(async (req, res) => {
   if (traded) throw new HttpError(409, `${traded} card(s) from this purchase left in a trade. Undo the trade first.`);
   const cleansed = await Card.countDocuments({ purchase: p._id, 'sale.debt': { $exists: true, $ne: null } });
   if (cleansed) throw new HttpError(409, `${cleansed} card(s) from this purchase were taken to cleanse debt. Undo that on the Debt page first.`);
+  const converted = await Card.countDocuments({ purchase: p._id, status: 'binder' });
+  if (converted) throw new HttpError(409, `${converted} card(s) from this purchase were moved to the binder. Undo that in Binder history first.`);
   const sold = await Card.countDocuments({ purchase: p._id, status: 'sold' });
   if (sold && req.query.force !== 'true') {
     throw new HttpError(409, `${sold} card(s) from this purchase were already sold. Add ?force=true to delete anyway.`);

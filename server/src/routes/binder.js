@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import BinderEntry from '../models/BinderEntry.js';
 import Settings from '../models/Settings.js';
+import Card from '../models/Card.js';
 import Transaction from '../models/Transaction.js';
 import { ah, HttpError, positive, checkWallet, binderPool } from '../util.js';
 import { today, round2 } from '../constants.js';
@@ -61,6 +62,16 @@ r.delete('/:id', ah(async (req, res) => {
   const existing = await BinderEntry.findById(req.params.id);
   if (!existing) throw new HttpError(404, 'Entry not found.');
   if (existing.trade) throw new HttpError(409, 'This binder entry is part of a trade. Undo the trade on the Trade page instead.');
+  if (existing.type === 'buy') {
+    const pool = await binderPool();
+    if (pool.count - existing.count < 0) {
+      throw new HttpError(409, `The binder only has ${pool.count} card${pool.count === 1 ? '' : 's'} left, so ${existing.count} can't come out. Undo a binder sale first.`);
+    }
+  }
+  // Undoing a conversion puts the card back in inventory
+  if (existing.method === 'Convert' && existing.card) {
+    await Card.updateOne({ _id: existing.card, binderEntry: existing._id }, { status: 'in_stock', binderEntry: null });
+  }
   const entry = await BinderEntry.findByIdAndDelete(req.params.id);
   await Transaction.deleteMany({ binderEntry: entry._id });
   res.json({ deleted: entry._id, pool: await binderPool() });

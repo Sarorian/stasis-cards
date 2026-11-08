@@ -31,7 +31,8 @@ function lastMonths(n) {
 
 r.get('/', ah(async (req, res) => {
   const [cards, binderEntries, settings, wallets, pool, miscItemsRaw, miscEntries, debtEntries] = await Promise.all([
-    Card.find().select('-priceHistory').lean(),
+    // Cards moved into the binder count as binder cards (their cost is in the binder pool)
+    Card.find({ status: { $ne: 'binder' } }).select('-priceHistory').lean(),
     BinderEntry.find().lean(),
     Settings.get(),
     walletBalances(),

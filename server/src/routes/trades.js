@@ -252,6 +252,10 @@ r.delete('/:id', ah(async (req, res) => {
   if (soldSince.length) {
     throw new HttpError(409, `Undo the sale of ${soldSince.map((c) => c.name).join(', ')} first. It came in on this trade.`);
   }
+  const binderSince = await Card.find({ tradeIn: trade._id, status: 'binder' }, 'name');
+  if (binderSince.length) {
+    throw new HttpError(409, `${binderSince.map((c) => c.name).join(', ')} came in on this trade and was moved to the binder. Undo that in Binder history first.`);
+  }
   if (trade.inBinder?.count) {
     const pool = await binderPool();
     if (pool.count - trade.inBinder.count < 0) {

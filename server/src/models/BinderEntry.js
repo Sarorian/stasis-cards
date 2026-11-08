@@ -11,7 +11,9 @@ const binderEntrySchema = new mongoose.Schema(
     amount: { type: Number, required: true, min: 0 },
     // 'Trade' = binder cards traded in or out; no wallet moved
     // 'Trade' = binder cards traded in or out, 'Opening' = already owned on the start date; no wallet moved
-    method: { type: String, enum: [...WALLETS, 'Trade', 'Opening'], required: true },
+    // 'Convert' = an inventory card moved into the binder (card links back to it)
+    method: { type: String, enum: [...WALLETS, 'Trade', 'Opening', 'Convert'], required: true },
+    card: { type: mongoose.Schema.Types.ObjectId, ref: 'Card' },
     trade: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
     // For buys: what we decided the cards are worth at market (amount = what we paid)
     market: { type: Number, default: null },

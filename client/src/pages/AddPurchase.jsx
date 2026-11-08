@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { WALLETS, DEBT_METHODS, money, today, fmtDate } from '../format.js';
 import PaymentSplit, { singlePayment, resolvePayments, splitError } from '../components/PaymentSplit.jsx';
 import CardEntry, { blankCard } from '../components/CardEntry.jsx';
 
 export default function AddPurchase() {
-  const [tab, setTab] = useState('singles');
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(params.get('tab') === 'binder' ? 'binder' : 'singles');
   return (
     <>
       <div className="page-head">
@@ -146,7 +147,10 @@ function BinderBuyForm() {
   }
 
   async function remove(entry) {
-    if (!window.confirm(`Delete this binder ${entry.type} of ${entry.count} cards? Its money is removed too.`)) return;
+    const text = entry.method === 'Convert'
+      ? `Undo moving this card to the binder? ${entry.notes.replace('From inventory: ', '')} goes back into inventory.`
+      : `Delete this binder ${entry.type} of ${entry.count} cards? Its money is removed too.`;
+    if (!window.confirm(text)) return;
     try {
       await api.deleteBinderEntry(entry._id);
       load();
@@ -190,12 +194,12 @@ function BinderBuyForm() {
               {data.entries.map((e) => (
                 <tr key={e._id}>
                   <td>{fmtDate(e.date)}</td>
-                  <td>{e.type === 'buy' ? 'Bought' : 'Sold'}</td>
+                  <td>{e.method === 'Convert' ? <>From inventory <span className="faint">· {e.notes.replace('From inventory: ', '')}</span></> : e.type === 'buy' ? 'Bought' : 'Sold'}</td>
                   <td className="num">{e.count}</td>
                   <td className="num faint">{e.type === 'buy' ? (e.market != null ? money(e.market) : '—') : ''}</td>
                   <td className={`num ${e.type === 'sell' ? 'pos' : ''}`}>{money(e.amount)}</td>
-                  <td>{e.method}</td>
-                  <td className="num"><button className="small ghost danger" onClick={() => remove(e)} aria-label="Delete entry">✕</button></td>
+                  <td>{e.method === 'Convert' ? '—' : e.method}</td>
+                  <td className="num"><button className="small ghost danger" onClick={() => remove(e)} aria-label={e.method === 'Convert' ? 'Undo: put the card back in inventory' : 'Delete entry'} title={e.method === 'Convert' ? 'Undo: put the card back in inventory' : 'Delete entry'}>✕</button></td>
                 </tr>
               ))}
             </tbody>

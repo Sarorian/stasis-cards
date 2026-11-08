@@ -47,6 +47,7 @@ export const api = {
   unsellCard: (id) => request('POST', `/cards/${id}/unsell`),
   refreshCard: (id) => request('POST', `/cards/${id}/refresh`),
   linkCard: (id, body) => request('POST', `/cards/${id}/link`, body),
+  cardToBinder: (id, body) => request('POST', `/cards/${id}/to-binder`, body),
 
   purchases: () => request('GET', '/purchases'),
   createPurchase: (body) => request('POST', '/purchases', body),

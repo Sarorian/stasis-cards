@@ -66,7 +66,9 @@ const cardSchema = new mongoose.Schema(
       pricechartingId: String,
     },
 
-    status: { type: String, enum: ['in_stock', 'sold'], default: 'in_stock' },
+    // 'binder' = moved into the binder pool (see binderEntry); undo it from Binder history
+    status: { type: String, enum: ['in_stock', 'sold', 'binder'], default: 'in_stock' },
+    binderEntry: { type: mongoose.Schema.Types.ObjectId, ref: 'BinderEntry', default: null },
     sale: {
       date: dateStr,
       price: Number,

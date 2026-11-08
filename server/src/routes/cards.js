@@ -3,7 +3,8 @@ import Card from '../models/Card.js';
 import Transaction from '../models/Transaction.js';
 import Purchase from '../models/Purchase.js';
 import DebtEntry from '../models/DebtEntry.js';
-import { ah, HttpError, positive, parsePayments, checkWallet } from '../util.js';
+import BinderEntry from '../models/BinderEntry.js';
+import { ah, HttpError, positive, parsePayments, checkWallet, binderPool } from '../util.js';
 import { today, round2, GAMES, CONDITIONS, GRADERS } from '../constants.js';
 import { refreshCard, manualReason } from '../prices/index.js';
 
@@ -154,6 +155,7 @@ r.delete('/:id', ah(async (req, res) => {
     throw new HttpError(409, `${existing.name} is part of a trade. Undo the trade on the Trade page instead.`);
   }
   if (existing.sale?.debt) throw new HttpError(409, `${existing.name} was taken to cleanse debt. Undo that on the Debt page instead.`);
+  if (existing.status === 'binder') throw new HttpError(409, `${existing.name} was moved to the binder. Undo that in Binder history instead.`);
   const card = await Card.findByIdAndDelete(req.params.id);
   await Transaction.deleteMany({ card: card._id, kind: 'sale' });
   res.json({ deleted: card._id });
@@ -261,6 +263,29 @@ r.post('/:id/link', ah(async (req, res) => {
   }
   await card.save();
   res.json(card);
+}));
+
+/*
+  Move an inventory card into the binder: { market?, date? }
+  The card leaves inventory; the binder gets +1 card, the card's cost, and its market value
+  (current market price unless given). No money moves. Undo by deleting the entry in Binder history.
+*/
+r.post('/:id/to-binder', ah(async (req, res) => {
+  const card = await Card.findById(req.params.id);
+  if (!card) throw new HttpError(404, 'Card not found.');
+  if (card.status !== 'in_stock') throw new HttpError(400, `${card.name} isn't in stock.`);
+  const marketIn = req.body?.market;
+  const market = marketIn === undefined || marketIn === null || marketIn === '' ? round2(card.market?.price || 0) : round2(Number(marketIn));
+  if (!(market >= 0)) throw new HttpError(400, 'Market value must be 0 or more.');
+  const label = [card.name, card.number].filter(Boolean).join(' ') + (card.graded?.company ? ` (${card.graded.company} ${card.graded.grade})` : '');
+  const entry = await BinderEntry.create({
+    type: 'buy', date: req.body?.date || today(), count: 1, amount: round2(card.cost || 0), market,
+    method: 'Convert', card: card._id, notes: `From inventory: ${label}`,
+  });
+  card.status = 'binder';
+  card.binderEntry = entry._id;
+  await card.save();
+  res.json({ entry, pool: await binderPool() });
 }));
 
 export default r;
