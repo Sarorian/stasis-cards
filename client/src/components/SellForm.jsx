@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import { money, today, pct, tone } from '../format.js';
 import PaymentSplit, { singlePayment, resolvePayments, splitError } from './PaymentSplit.jsx';
+import WherePicker from './WherePicker.jsx';
 
 export default function SellForm({ card, onDone, onCancel }) {
-  const [f, setF] = useState({ date: today(), price: '', fees: '' });
+  const [f, setF] = useState({ date: today(), price: '', fees: '', at: undefined });
   const [pay, setPay] = useState(singlePayment());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,7 +24,7 @@ export default function SellForm({ card, onDone, onCancel }) {
     setBusy(true);
     try {
       await api.sellCard(card._id, {
-        date: f.date, price: Number(f.price), fees: Number(f.fees) || 0,
+        date: f.date, price: Number(f.price), fees: Number(f.fees) || 0, at: f.at,
         ...(payments.length > 1 ? { payments } : { method: payments[0].method }),
       });
       onDone?.();
@@ -40,6 +41,7 @@ export default function SellForm({ card, onDone, onCancel }) {
         <label className="field">Sold for<input type="number" min="0" step="0.01" autoFocus placeholder={card.market?.price} value={f.price} onChange={set('price')} /></label>
         <PaymentSplit rows={pay} onChange={(r) => { setPay(r); setError(''); }} total={Number(f.price) || 0} />
         <label className="field">Fees (optional)<input type="number" min="0" step="0.01" placeholder="0.00" value={f.fees} onChange={set('fees')} /></label>
+        <WherePicker value={f.at} date={f.date} onChange={(at) => setF((x) => ({ ...x, at }))} />
         <button className="primary" disabled={busy}>Confirm sale</button>
         <button type="button" onClick={onCancel}>Cancel</button>
       </div>

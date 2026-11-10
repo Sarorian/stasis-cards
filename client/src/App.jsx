@@ -11,6 +11,7 @@ import Misc from './pages/Misc.jsx';
 import Debt from './pages/Debt.jsx';
 import Setup from './pages/Setup.jsx';
 import Insights from './pages/Insights.jsx';
+import Shows from './pages/Shows.jsx';
 
 export default function App() {
   const [authed, setAuthed] = useState(Boolean(getToken()));
@@ -39,6 +40,7 @@ export default function App() {
         <NavLink to="/inventory" className="navlink">Inventory</NavLink>
         <NavLink to="/add" className="navlink">Add purchase</NavLink>
         <NavLink to="/trade" className="navlink">Trade</NavLink>
+        <NavLink to="/shows" className="navlink">Shows</NavLink>
         <NavLink to="/misc" className="navlink">Misc</NavLink>
         <NavLink to="/debt" className="navlink">Debt</NavLink>
         <NavLink to="/insights" className="navlink">Insights</NavLink>
@@ -51,6 +53,7 @@ export default function App() {
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/add" element={<AddPurchase />} />
           <Route path="/trade" element={<Trade />} />
+          <Route path="/shows" element={<Shows />} />
           <Route path="/misc" element={<Misc />} />
           <Route path="/debt" element={<Debt />} />
           <Route path="/setup" element={<Setup />} />

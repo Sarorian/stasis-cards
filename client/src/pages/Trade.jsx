@@ -4,6 +4,7 @@ import { WALLETS, CONDITIONS, GRADERS, money, today, fmtDate } from '../format.j
 import CardImage from '../components/CardImage.jsx';
 import CardFinder from '../components/CardFinder.jsx';
 import PaymentSplit, { singlePayment, resolvePayments, splitError } from '../components/PaymentSplit.jsx';
+import WherePicker from '../components/WherePicker.jsx';
 
 const r2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const num = (v) => (v === '' || v === null || v === undefined ? 0 : Number(v) || 0);
@@ -45,6 +46,7 @@ export default function Trade() {
 
 function NewTrade({ onDone }) {
   const [date, setDate] = useState(today());
+  const [at, setAt] = useState(undefined);
   const [pct, setPct] = useState('80');
   const [notes, setNotes] = useState('');
 
@@ -164,7 +166,7 @@ function NewTrade({ onDone }) {
   /* ---------- submit ---------- */
   function reset() {
     setOurs([]); setTheirs([]); setOurBinder({ count: '', value: '' }); setTheirBinder({ count: '', value: '', market: '' });
-    setCashText(''); setDirection(null); setNotes(''); setError(''); setPay(singlePayment(pay[0].method));
+    setCashText(''); setDirection(null); setNotes(''); setError(''); setPay(singlePayment(pay[0].method)); setAt(undefined);
   }
 
   async function complete() {
@@ -197,7 +199,7 @@ function NewTrade({ onDone }) {
     setBusy(true);
     try {
       await api.createTrade({
-        date, tradeInPct: pctNum, notes,
+        date, at, tradeInPct: pctNum, notes,
         outCards: ours.map((o) => ({ id: o.id, value: num(o.value) })),
         outBinder: num(ourBinder.count) > 0 ? { count: num(ourBinder.count), value: outBinderValue } : null,
         inCards: theirs.map((t) => ({
@@ -224,8 +226,9 @@ function NewTrade({ onDone }) {
   return (
     <>
       <div className="panel">
-        <div className="form-row" style={{ gridTemplateColumns: '1fr 0.7fr 2fr' }}>
+        <div className="form-row" style={{ gridTemplateColumns: '0.9fr 1.3fr 0.7fr 1.6fr' }}>
           <label className="field">Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <WherePicker value={at} date={date} onChange={setAt} />
           <label className="field">Trade-in % (their cards)
             <input type="number" min="0" max="200" step="1" value={pct} onChange={(e) => setPct(e.target.value)} />
           </label>

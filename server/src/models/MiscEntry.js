@@ -16,6 +16,8 @@ const miscEntrySchema = new mongoose.Schema(
     fees: { type: Number, default: 0, min: 0 },
     method: { type: String, enum: [...WALLETS, null], default: null },
     costBasis: { type: Number, required: true, min: 0 },
+    // Where (sales): a show id, 'private' or 'ebay' (null = not set)
+    at: { type: String, default: null },
     notes: { type: String, default: '' },
   },
   { timestamps: true }

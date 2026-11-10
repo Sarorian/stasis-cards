@@ -5,10 +5,11 @@ import { CONDITIONS, GRADERS, DEBT_METHODS, money, today } from '../format.js';
 import PaymentSplit, { singlePayment, resolvePayments, splitError } from './PaymentSplit.jsx';
 import CardFinder from './CardFinder.jsx';
 import CardImage from './CardImage.jsx';
+import WherePicker from './WherePicker.jsx';
 
 const blank = (game = 'Pokemon', language = 'EN') => ({
   game, language, pick: null, name: '', number: '', setName: '', imageUrl: '', external: {}, sources: [],
-  condition: 'NM', graded: false, company: 'PSA', grade: '', market: '', cost: '', date: today(),
+  condition: 'NM', graded: false, company: 'PSA', grade: '', market: '', cost: '', date: today(), at: undefined,
 });
 
 // Buy one card in a few clicks (a one-card purchase). Bigger buys go through Add purchase.
@@ -42,7 +43,7 @@ export default function QuickAddCard({ onAdded }) {
     setBusy(true);
     try {
       await api.createPurchase({
-        date: f.date, totalCost: null,
+        date: f.date, totalCost: null, at: f.at,
         ...(payments.length > 1 ? { payments } : { paidFrom: payments[0].method }),
         cards: [{
           name: f.name.trim(), number: f.number.trim(), game: f.game, language: f.language, setName: f.setName,
@@ -88,7 +89,10 @@ export default function QuickAddCard({ onAdded }) {
                 <select value={f.condition} onChange={set('condition')}>{CONDITIONS.map((c) => <option key={c}>{c}</option>)}</select>
               </label>
             )}
+          </div>
+          <div className="form-row" style={{ marginTop: 8, gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)' }}>
             <label className="field">Date<input type="date" value={f.date} onChange={set('date')} /></label>
+            <WherePicker label="Bought at" value={f.at} date={f.date} onChange={(at) => setF((x) => ({ ...x, at }))} />
           </div>
           <div className="form-row quick-row2" style={{ marginTop: 8 }}>
             <label className="field">Market<input type="number" min="0" step="0.01" placeholder="0.00" value={f.market} onChange={set('market')} /></label>

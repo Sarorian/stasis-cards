@@ -14,6 +14,8 @@ const binderEntrySchema = new mongoose.Schema(
     // 'Convert' = an inventory card moved into the binder (card links back to it)
     method: { type: String, enum: [...WALLETS, 'Trade', 'Opening', 'Convert'], required: true },
     card: { type: mongoose.Schema.Types.ObjectId, ref: 'Card' },
+    // Where: a show id, 'private' or 'ebay' (null = not set)
+    at: { type: String, default: null },
     trade: { type: mongoose.Schema.Types.ObjectId, ref: 'Trade' },
     // For buys: what we decided the cards are worth at market (amount = what we paid)
     market: { type: Number, default: null },

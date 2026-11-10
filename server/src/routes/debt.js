@@ -101,6 +101,7 @@ r.delete('/:id', ah(async (req, res) => {
   const entry = await DebtEntry.findById(req.params.id);
   if (!entry) throw new HttpError(404, 'Entry not found.');
   if (entry.purchase) throw new HttpError(409, 'This debt came from a card purchase. Delete that purchase to remove it.');
+  if (entry.show) throw new HttpError(409, 'This is a show cost. Remove it on the Shows page.');
   if (entry.type === 'add') {
     const owed = balances(await DebtEntry.find({ person: entry.person }).lean())[entry.person].owed;
     if (owed - entry.amount < -0.004) {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import { GAMES, CONDITIONS, GRADERS, WALLETS, money, today, fmtDate } from '../format.js';
+import WherePicker from './WherePicker.jsx';
 
 const r2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
@@ -14,7 +15,9 @@ export default function EditCardForm({ card, onDone, onCancel }) {
     condition: card.condition || 'NM', graded: wasGraded, company: card.graded?.company || 'PSA', grade: card.graded?.grade || '',
     boughtDate: card.boughtDate || '', paid: String(oldPaid), notes: card.notes || '',
     feeAmount: '', feeWallet: 'Cash', feeDate: today(),
+    boughtAt: card.boughtAt || null, saleAt: card.sale?.at || null,
   });
+  const sold = card.status === 'sold';
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => { setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }); setError(''); };
@@ -34,6 +37,8 @@ export default function EditCardForm({ card, onDone, onCancel }) {
         name: f.name.trim(), number: f.number.trim(), setName: f.setName.trim(), game: f.game, language: f.japanese ? 'JP' : 'EN',
         condition: f.condition, graded: f.graded ? { company: f.company, grade: String(f.grade).trim() } : null,
         boughtDate: f.boughtDate || card.boughtDate, notes: f.notes,
+        ...(f.boughtAt !== (card.boughtAt || null) ? { boughtAt: f.boughtAt } : {}),
+        ...(sold && f.saleAt !== (card.sale?.at || null) ? { saleAt: f.saleAt } : {}),
         ...(paidDiff !== 0 ? { paid: Number(f.paid) } : {}),
         ...(fee > 0 ? { gradingFee: { amount: fee, wallet: f.feeWallet, date: f.feeDate } } : {}),
       });
@@ -88,6 +93,10 @@ export default function EditCardForm({ card, onDone, onCancel }) {
         )}
         <label className="field">What we paid<input type="number" min="0" step="0.01" value={f.paid} onChange={set('paid')} disabled={Boolean(card.tradeIn)} /></label>
         <label className="field">Bought<input type="date" value={f.boughtDate} onChange={set('boughtDate')} /></label>
+      </div>
+      <div className="form-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginTop: 8 }}>
+        <WherePicker label={card.tradeIn ? 'Traded in at' : 'Bought at'} allowUnset value={f.boughtAt} onChange={(v) => setF((x) => ({ ...x, boughtAt: v }))} />
+        {sold && <WherePicker label={card.sale?.trade ? 'Traded away at' : 'Sold at'} allowUnset value={f.saleAt} onChange={(v) => setF((x) => ({ ...x, saleAt: v }))} />}
       </div>
       {walletNote && <div className="hint" style={{ marginTop: 6 }}>{walletNote}</div>}
 

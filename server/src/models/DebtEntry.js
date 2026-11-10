@@ -22,6 +22,8 @@ const debtEntrySchema = new mongoose.Schema(
     wallet: { type: String, enum: [...WALLETS, null], default: null },
     card: { type: mongoose.Schema.Types.ObjectId, ref: 'Card' },
     purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' },
+    // A show cost (table fee or expense) they paid; managed from the Shows page
+    show: { type: mongoose.Schema.Types.ObjectId, ref: 'Show' },
   },
   { timestamps: true }
 );

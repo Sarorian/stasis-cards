@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { checkAt } from '../where.js';
 import Purchase from '../models/Purchase.js';
 import Card from '../models/Card.js';
 import Transaction from '../models/Transaction.js';
@@ -76,8 +77,9 @@ r.post('/', ah(async (req, res) => {
   const totalSpent = round2(costs.reduce((a, b) => a + b, 0));
 
   const payments = purchasePayments(req.body, totalSpent);
+  const at = await checkAt(req.body.at);
   const purchase = await Purchase.create({
-    date, paidFrom: payments[0].method, payments: payments.length > 1 ? payments : [], totalCost, totalSpent, totalMarket, cards: [],
+    date, at, paidFrom: payments[0].method, payments: payments.length > 1 ? payments : [], totalCost, totalSpent, totalMarket, cards: [],
   });
   const docs = await Card.insertMany(
     cards.map((c, i) => {
@@ -94,6 +96,7 @@ r.post('/', ah(async (req, res) => {
         external: c.external || {},
         purchase: purchase._id,
         boughtDate: date,
+        boughtAt: at,
         cost: costs[i],
         marketAtPurchase: round2(c.marketValue),
         pctOfMarket: Math.round((costs[i] / Number(c.marketValue)) * 1000) / 10,

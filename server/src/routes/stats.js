@@ -4,6 +4,7 @@ import BinderEntry from '../models/BinderEntry.js';
 import Settings from '../models/Settings.js';
 import MiscItem from '../models/MiscItem.js';
 import DebtEntry from '../models/DebtEntry.js';
+import Show from '../models/Show.js';
 import { balances as debtBalances } from './debt.js';
 import MiscEntry from '../models/MiscEntry.js';
 import { summarize as summarizeMisc } from './misc.js';
@@ -30,7 +31,7 @@ function lastMonths(n) {
 }
 
 r.get('/', ah(async (req, res) => {
-  const [cards, binderEntries, settings, wallets, pool, miscItemsRaw, miscEntries, debtEntries] = await Promise.all([
+  const [cards, binderEntries, settings, wallets, pool, miscItemsRaw, miscEntries, debtEntries, shows] = await Promise.all([
     // Cards moved into the binder count as binder cards (their cost is in the binder pool)
     Card.find({ status: { $ne: 'binder' } }).select('-priceHistory').lean(),
     BinderEntry.find().lean(),
@@ -40,6 +41,7 @@ r.get('/', ah(async (req, res) => {
     MiscItem.find().lean(),
     MiscEntry.find().lean(),
     DebtEntry.find().lean(),
+    Show.find().lean(),
   ]);
   const miscById = new Map(miscItemsRaw.map((i) => [String(i._id), i]));
   const miscItems = miscItemsRaw.map((i) => summarizeMisc(i, miscEntries.filter((e) => String(e.item) === String(i._id))));
@@ -76,7 +78,15 @@ r.get('/', ah(async (req, res) => {
   const cogs = round2(sales.reduce((a, s) => a + s.cost, 0));
   const salesProfit = round2(revenue - fees - cogs);
   // Business costs Owen/Ben paid personally (shows, gas, food) are expenses
-  const expenseEntries = debtEntries.filter((e) => e.type === 'add' && e.how === 'expense');
+  // plus show costs: table fees and parking/food/gas, however they were paid (the debt-paid ones are
+  // counted from the show, not twice)
+  const showCosts = shows.flatMap((sh) => [sh.tableFee, ...(sh.expenses || [])])
+    .filter((c) => c?.amount > 0)
+    .map((c) => ({ date: c.date, amount: c.amount }));
+  const expenseEntries = [
+    ...debtEntries.filter((e) => e.type === 'add' && e.how === 'expense' && !e.show),
+    ...showCosts,
+  ];
   const expenses = round2(expenseEntries.reduce((a, e) => a + e.amount, 0));
   const profit = round2(salesProfit - expenses);
   // Money the business owes its partners is a liability

@@ -14,6 +14,8 @@ const purchaseSchema = new mongoose.Schema(
     totalSpent: { type: Number, required: true },
     totalMarket: { type: Number, required: true },
     cards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Card' }],
+    // Where: a show id, 'private' or 'ebay' (null = not set)
+    at: { type: String, default: null },
     notes: { type: String, default: '' },
   },
   { timestamps: true }

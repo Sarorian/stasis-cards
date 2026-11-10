@@ -69,6 +69,8 @@ const cardSchema = new mongoose.Schema(
     // 'binder' = moved into the binder pool (see binderEntry); undo it from Binder history
     status: { type: String, enum: ['in_stock', 'sold', 'binder'], default: 'in_stock' },
     binderEntry: { type: mongoose.Schema.Types.ObjectId, ref: 'BinderEntry', default: null },
+    // Where it was bought / traded in: a show id, 'private' or 'ebay' (null = not set)
+    boughtAt: { type: String, default: null },
     sale: {
       date: dateStr,
       price: Number,
@@ -81,6 +83,8 @@ const cardSchema = new mongoose.Schema(
       // Set when a partner took this card to cleanse debt (sale.price is the cleansed value)
       debt: { type: mongoose.Schema.Types.ObjectId, ref: 'DebtEntry' },
       cleansedBy: { type: String, default: null },
+      // Where it was sold / traded away: a show id, 'private' or 'ebay' (null = not set)
+      at: { type: String, default: null },
     },
     notes: { type: String, default: '' },
   },

@@ -5,7 +5,7 @@ import { WALLETS, money, fmtDate } from '../format.js';
 
 const KIND_LABEL = {
   capital: 'Capital', purchase: 'Purchase', sale: 'Sale', binder_buy: 'Binder buy',
-  binder_sell: 'Binder sale', transfer: 'Transfer', adjustment: 'Correction', trade: 'Trade', misc_buy: 'Misc buy', misc_sell: 'Misc sale', debt_loan: 'Debt (loan in)', debt_clean: 'Debt cleanse', grading: 'Grading fee',
+  binder_sell: 'Binder sale', transfer: 'Transfer', adjustment: 'Correction', trade: 'Trade', misc_buy: 'Misc buy', misc_sell: 'Misc sale', debt_loan: 'Debt (loan in)', debt_clean: 'Debt cleanse', grading: 'Grading fee', show_expense: 'Show cost',
 };
 
 export default function Admin() {

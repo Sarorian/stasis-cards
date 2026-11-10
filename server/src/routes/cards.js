@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { checkAt } from '../where.js';
 import Card from '../models/Card.js';
 import Transaction from '../models/Transaction.js';
 import Purchase from '../models/Purchase.js';
@@ -58,6 +59,12 @@ r.patch('/:id', ah(async (req, res) => {
     card.game = b.game;
   }
   if ('language' in b) card.language = b.language === 'JP' ? 'JP' : 'EN';
+  // Where it was bought / sold (fixing older records)
+  if ('boughtAt' in b) card.boughtAt = await checkAt(b.boughtAt);
+  if ('saleAt' in b) {
+    if (card.status !== 'sold') throw new HttpError(400, `${card.name} isn't sold.`);
+    card.set('sale.at', await checkAt(b.saleAt));
+  }
   if ('condition' in b) {
     if (!CONDITIONS.includes(b.condition)) throw new HttpError(400, 'Pick a condition.');
     card.condition = b.condition;
@@ -171,9 +178,10 @@ r.post('/:id/sell', ah(async (req, res) => {
   const fees = round2(Number(req.body.fees) || 0);
   if (fees < 0 || fees > payments[0].amount) throw new HttpError(400, `Fees must be between $0 and the ${payments[0].method} amount.`);
   const date = req.body.date || today();
+  const at = await checkAt(req.body.at);
 
   card.status = 'sold';
-  card.sale = { date, price, fees, method: payments[0].method, payments: payments.length > 1 ? payments : [] };
+  card.sale = { date, price, fees, method: payments[0].method, payments: payments.length > 1 ? payments : [], at };
   await card.save();
   // One ledger row per wallet; fees come out of the biggest share
   await Transaction.insertMany(payments.map((p, i) => ({
@@ -191,7 +199,7 @@ r.post('/:id/unsell', ah(async (req, res) => {
   if (card.sale?.trade) throw new HttpError(409, `${card.name} left in a trade. Undo the trade on the Trade page instead.`);
   if (card.sale?.debt) throw new HttpError(409, `${card.name} was taken to cleanse debt. Undo that on the Debt page instead.`);
   card.status = 'in_stock';
-  card.sale = { date: undefined, price: undefined, fees: 0, method: null, payments: [] };
+  card.sale = { date: undefined, price: undefined, fees: 0, method: null, payments: [], at: null };
   await card.save();
   await Transaction.deleteMany({ card: card._id, kind: 'sale' });
   res.json(card);

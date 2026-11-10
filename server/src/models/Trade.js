@@ -37,6 +37,8 @@ const binderSideSchema = new mongoose.Schema(
 const tradeSchema = new mongoose.Schema(
   {
     date: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
+    // Where: a show id, 'private' or 'ebay' (null = not set)
+    at: { type: String, default: null },
     tradeInPct: { type: Number, default: 80 },
     outCards: [lineSchema],
     outBinder: { type: binderSideSchema, default: null },

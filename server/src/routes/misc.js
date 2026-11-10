@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { checkAt } from '../where.js';
 import MiscItem from '../models/MiscItem.js';
 import MiscEntry from '../models/MiscEntry.js';
 import Transaction from '../models/Transaction.js';
@@ -124,8 +125,9 @@ r.post('/:id/sell', ah(async (req, res) => {
   if (fees < 0) throw new HttpError(400, 'Fees can’t be negative.');
   const method = checkWallet(req.body.method);
   const date = req.body.date || today();
+  const at = await checkAt(req.body.at);
   const entry = await MiscEntry.create({
-    item: item._id, type: 'sell', date, units, amount, fees, method, costBasis: costFor(s, units), notes: req.body.notes || '',
+    item: item._id, type: 'sell', date, units, amount, fees, method, costBasis: costFor(s, units), at, notes: req.body.notes || '',
   });
   await Transaction.create({
     date, wallet: method, amount: round2(amount - fees), kind: 'misc_sell', miscItem: item._id, miscEntry: entry._id,

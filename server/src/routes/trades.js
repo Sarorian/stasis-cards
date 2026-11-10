@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { checkAt } from '../where.js';
 import Trade from '../models/Trade.js';
 import Card from '../models/Card.js';
 import BinderEntry from '../models/BinderEntry.js';
@@ -137,10 +138,12 @@ r.post('/', ah(async (req, res) => {
   // Cash can be split across wallets: { payments: [{ method, amount }] } adding up to the cash amount
   const payments = s.cash !== 0 ? parsePayments(b, Math.abs(s.cash), 'cash') : [];
   const method = payments[0]?.method || null;
+  const at = await checkAt(b.at);
 
   // ---- Write ----
   const trade = await Trade.create({
     date,
+    at,
     tradeInPct: Number(b.tradeInPct) || 80,
     notes: b.notes || '',
     outTotal: s.outTotal,
@@ -157,7 +160,7 @@ r.post('/', ah(async (req, res) => {
     // Our cards leave: sold for their trade value, no wallet
     for (const [i, { card }] of outCards.entries()) {
       card.status = 'sold';
-      card.sale = { date, price: s.outValues[i], fees: 0, method: null, trade: trade._id };
+      card.sale = { date, price: s.outValues[i], fees: 0, method: null, trade: trade._id, at };
       await card.save();
       trade.outCards.push({
         card: card._id, name: card.name, number: card.number, game: card.game,
@@ -168,7 +171,7 @@ r.post('/', ah(async (req, res) => {
     if (outBinderCount) {
       const costBasis = round2(pool.avgCost * outBinderCount);
       const entry = await BinderEntry.create({
-        type: 'sell', date, count: outBinderCount, amount: s.outBinderValue, method: 'Trade', costBasis,
+        type: 'sell', date, count: outBinderCount, amount: s.outBinderValue, method: 'Trade', costBasis, at,
         trade: trade._id, notes: 'Traded away',
       });
       created.entries.push(entry._id);
@@ -192,6 +195,7 @@ r.post('/', ah(async (req, res) => {
           external: c.external || {},
           tradeIn: trade._id,
           boughtDate: date,
+          boughtAt: at,
           cost,
           marketAtPurchase: c.market,
           pctOfMarket: Math.round((cost / c.market) * 1000) / 10,
@@ -212,7 +216,7 @@ r.post('/', ah(async (req, res) => {
 
     if (inBinderCount) {
       const entry = await BinderEntry.create({
-        type: 'buy', date, count: inBinderCount, amount: s.inBinderValue, method: 'Trade',
+        type: 'buy', date, count: inBinderCount, amount: s.inBinderValue, method: 'Trade', at,
         market: inBinderMarket ?? s.inBinderValue, trade: trade._id, notes: 'Traded in',
       });
       created.entries.push(entry._id);

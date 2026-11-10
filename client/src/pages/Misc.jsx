@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import WherePicker from '../components/WherePicker.jsx';
 import { GAMES, WALLETS, money, tone, today, fmtDate, logoFor } from '../format.js';
 
 const MISC_GAMES = [...GAMES.filter((g) => g !== 'Misc'), 'Other'];
@@ -204,7 +205,7 @@ function MiscItemRow({ item: i, onChange, onDeleted }) {
 }
 
 function SellForm({ item: i, onCancel, onDone }) {
-  const [f, setF] = useState({ date: today(), units: '1', amount: '', fees: '', method: 'Cash' });
+  const [f, setF] = useState({ date: today(), units: '1', amount: '', fees: '', method: 'Cash', at: undefined });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => { setF({ ...f, [k]: e.target.value }); setError(''); };
@@ -234,6 +235,7 @@ function SellForm({ item: i, onCancel, onDone }) {
         <label className="field">Sold for (total)<input type="number" min="0" step="0.01" placeholder="18.00" value={f.amount} onChange={set('amount')} /></label>
         <label className="field">Fees<input type="number" min="0" step="0.01" placeholder="0.00" value={f.fees} onChange={set('fees')} /></label>
         <label className="field">Paid via<select value={f.method} onChange={set('method')}>{WALLETS.map((w) => <option key={w}>{w}</option>)}</select></label>
+        <WherePicker value={f.at} date={f.date} onChange={(at) => setF((x) => ({ ...x, at }))} />
         <button className="primary" disabled={busy}>Record sale</button>
         <button type="button" onClick={onCancel}>Cancel</button>
       </div>

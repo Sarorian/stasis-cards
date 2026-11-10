@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { checkAt } from '../where.js';
 import BinderEntry from '../models/BinderEntry.js';
 import Settings from '../models/Settings.js';
 import Card from '../models/Card.js';
@@ -20,7 +21,8 @@ r.post('/buy', ah(async (req, res) => {
   const amount = positive(req.body.amount, 'Total paid');
   const method = checkWallet(req.body.method);
   const date = req.body.date || today();
-  const entry = await BinderEntry.create({ type: 'buy', date, count, amount, market, method, notes: req.body.notes });
+  const at = await checkAt(req.body.at);
+  const entry = await BinderEntry.create({ type: 'buy', date, count, amount, market, method, at, notes: req.body.notes });
   await Transaction.create({
     date, wallet: method, amount: -amount, kind: 'binder_buy', binderEntry: entry._id,
     note: `Bought ${count} binder cards`,
@@ -37,7 +39,8 @@ r.post('/sell', ah(async (req, res) => {
   const pool = await binderPool();
   if (count > pool.count) throw new HttpError(400, `Only ${pool.count} binder cards in stock.`);
   const costBasis = round2(pool.avgCost * count);
-  const entry = await BinderEntry.create({ type: 'sell', date, count, amount, method, costBasis, notes: req.body.notes });
+  const at = await checkAt(req.body.at);
+  const entry = await BinderEntry.create({ type: 'sell', date, count, amount, method, costBasis, at, notes: req.body.notes });
   await Transaction.create({
     date, wallet: method, amount, kind: 'binder_sell', binderEntry: entry._id,
     note: `Sold ${count} binder cards`,

@@ -16,6 +16,7 @@ import misc from './routes/misc.js';
 import debt from './routes/debt.js';
 import setup from './routes/setup.js';
 import images from './routes/images.js';
+import shows from './routes/shows.js';
 import { GAMES, WALLETS, CONDITIONS, GRADERS, PARTNERS } from './constants.js';
 
 for (const key of ['MONGODB_URI', 'APP_PASSWORD', 'JWT_SECRET']) {
@@ -51,6 +52,7 @@ app.use('/api/misc', misc);
 app.use('/api/debt', debt);
 app.use('/api/setup', setup);
 app.use('/api/images', images);
+app.use('/api/shows', shows);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 

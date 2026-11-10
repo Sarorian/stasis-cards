@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { WALLETS, DEBT_METHODS, money, today, fmtDate } from '../format.js';
 import PaymentSplit, { singlePayment, resolvePayments, splitError } from '../components/PaymentSplit.jsx';
 import CardEntry, { blankCard } from '../components/CardEntry.jsx';
+import WherePicker from '../components/WherePicker.jsx';
 
 export default function AddPurchase() {
   const [params] = useSearchParams();
@@ -27,6 +28,7 @@ function SinglesForm() {
   const [date, setDate] = useState(today());
   const [pay, setPay] = useState(singlePayment()); // wallet(s) and/or partner debt
   const [total, setTotal] = useState('');
+  const [at, setAt] = useState(undefined);
   const [cards, setCards] = useState([blankCard()]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -54,6 +56,7 @@ function SinglesForm() {
     try {
       await api.createPurchase({
         date,
+        at,
         ...(payments.length > 1 ? { payments } : { paidFrom: payments[0].method }),
         totalCost: useTotal ? totalCost : null,
         cards: cards.map((c) => ({
@@ -81,8 +84,9 @@ function SinglesForm() {
   return (
     <>
       <div className="panel">
-        <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <div className="form-row" style={{ gridTemplateColumns: '0.8fr 1fr 1.3fr 1fr' }}>
           <label className="field">Date<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <WherePicker label="Bought at" value={at} date={date} onChange={setAt} />
           <PaymentSplit label="Paid with" rows={pay} onChange={(r) => { setPay(r); setError(''); }} total={spend} extraMethods={DEBT_METHODS} />
           <label className="field">Total purchase cost (optional)
             <input type="number" min="0" step="0.01" placeholder="300.00" value={total} onChange={(e) => { setTotal(e.target.value); setError(''); }} />
@@ -122,7 +126,7 @@ function SinglesForm() {
 }
 
 function BinderBuyForm() {
-  const [f, setF] = useState({ date: today(), count: '', market: '', amount: '', method: 'Cash' });
+  const [f, setF] = useState({ date: today(), count: '', market: '', amount: '', method: 'Cash', at: undefined });
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
@@ -139,7 +143,7 @@ function BinderBuyForm() {
     try {
       await api.binderBuy({ ...f, count: Number(f.count), market: Number(f.market), amount: Number(f.amount) });
       setOk(`Added ${f.count} binder cards worth ${money(f.market)} for ${money(f.amount)}.`);
-      setF({ date: today(), count: '', market: '', amount: '', method: f.method });
+      setF({ date: today(), count: '', market: '', amount: '', method: f.method, at: undefined });
       load();
     } catch (err) {
       setError(err.message);
@@ -166,7 +170,7 @@ function BinderBuyForm() {
           <h2>Binder purchase</h2>
           {data && <span className="hint">{data.pool.count} in stock · worth ~{money(data.pool.value)} · paid {money(data.pool.cost)}</span>}
         </div>
-        <div className="form-row" style={{ gridTemplateColumns: '1.1fr 1fr 1fr 1fr 1fr auto' }}>
+        <div className="form-row" style={{ gridTemplateColumns: '1.1fr 0.9fr 0.9fr 0.9fr 1fr 1.3fr auto' }}>
           <label className="field">Date<input type="date" value={f.date} onChange={set('date')} /></label>
           <label className="field">Number of cards<input type="number" min="1" step="1" placeholder="100" value={f.count} onChange={set('count')} /></label>
           <label className="field">Market value<input type="number" min="0" step="0.01" placeholder="190.00" value={f.market} onChange={set('market')} /></label>
@@ -174,6 +178,7 @@ function BinderBuyForm() {
           <label className="field">Paid from
             <select value={f.method} onChange={set('method')}>{WALLETS.map((w) => <option key={w}>{w}</option>)}</select>
           </label>
+          <WherePicker label="Bought at" value={f.at} date={f.date} onChange={(at) => setF((x) => ({ ...x, at }))} />
           <button className="primary">Save</button>
         </div>
         {f.count > 0 && f.amount > 0 && (
