@@ -34,6 +34,15 @@ const qs = (params) => {
   return s ? `?${s}` : '';
 };
 
+// A card picture as a Blob, loaded through our server (so it can be drawn into a PNG)
+export async function cardImageBlob(url) {
+  const res = await fetch(`${BASE}/images?url=${encodeURIComponent(url)}`, {
+    headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+  });
+  if (!res.ok) throw new Error(`Picture failed (${res.status})`);
+  return res.blob();
+}
+
 export const api = {
   login: (password) => request('POST', '/auth/login', { password }),
 

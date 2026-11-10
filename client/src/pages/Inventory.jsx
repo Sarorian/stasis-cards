@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { GAMES, money, roiPct } from '../format.js';
 import BinderSaleForm from '../components/BinderSaleForm.jsx';
 import CardRow from '../components/CardRow.jsx';
+import ShareInventory from '../components/ShareInventory.jsx';
 
 const SORTS = {
   newest: (a, b) => (b.boughtDate || '').localeCompare(a.boughtDate || ''),
@@ -25,6 +26,7 @@ export default function Inventory() {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('newest');
   const [error, setError] = useState('');
+  const [sharing, setSharing] = useState(false);
 
   const load = useCallback(() => {
     Promise.all([api.cards({ status: view }), api.binder()])
@@ -48,8 +50,13 @@ export default function Inventory() {
     <>
       <div className="page-head">
         <h1>Inventory</h1>
-        <Link to="/add"><button className="primary">Add purchase</button></Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setSharing(!sharing)}>Share image</button>
+          <Link to="/add"><button className="primary">Add purchase</button></Link>
+        </div>
       </div>
+
+      {sharing && <ShareInventory defaultGame={game} onClose={() => setSharing(false)} />}
 
       <BinderSaleForm pool={pool} onSaved={load} />
 

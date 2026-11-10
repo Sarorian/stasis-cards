@@ -375,3 +375,7 @@ label.jp-toggle input { width: auto; margin: 0; }
 .quick-row2 { grid-template-columns: 1fr 1fr minmax(150px, 1.6fr) auto; }
 button.attention { border-color: var(--warn); color: var(--warn); }
 @media (max-width: 720px) { .form-row.quick-row, .form-row.quick-row2 { grid-template-columns: 1fr 1fr !important; } }
+
+/* Share inventory image */
+.share-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.share-preview { display: block; width: 100%; max-width: 760px; margin-top: 12px; border-radius: var(--radius); border: 1px solid var(--border); }
