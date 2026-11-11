@@ -378,7 +378,11 @@ button.attention { border-color: var(--warn); color: var(--warn); }
 
 /* Share inventory image */
 .share-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
-.share-preview { display: block; width: 100%; max-width: 760px; margin-top: 12px; border-radius: var(--radius); border: 1px solid var(--border); }
+.share-pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 12px; }
+.share-page { margin: 0; }
+.share-page figcaption { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.share-page figcaption b { margin-right: auto; font-size: 13px; }
+.share-preview { display: block; width: 100%; max-width: 760px; border-radius: var(--radius); border: 1px solid var(--border); }
 
 /* Shows */
 .section-title { font-size: 15px; font-weight: 600; color: var(--muted); margin: 18px 0 8px; }

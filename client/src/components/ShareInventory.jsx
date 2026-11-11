@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { GAMES } from '../format.js';
-import { buildInventoryImage, gameLabel } from '../inventoryImage.js';
+import { buildInventoryImages, stackCards, gameLabel, PER_PAGE } from '../inventoryImage.js';
 
 // Build a PNG of one game's in-stock cards to share (download, copy, or the phone's share sheet)
 export default function ShareInventory({ defaultGame, onClose }) {
@@ -9,22 +9,23 @@ export default function ShareInventory({ defaultGame, onClose }) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
-  const [result, setResult] = useState(null); // { blob, url, count }
-  const [copied, setCopied] = useState('');
+  const [result, setResult] = useState(null); // { pages: [{ blob, url }], count, tiles }
+  const [msg, setMsg] = useState('');
 
-  useEffect(() => () => result && URL.revokeObjectURL(result.url), [result]);
+  useEffect(() => () => result?.pages.forEach((p) => URL.revokeObjectURL(p.url)), [result]);
 
   async function build() {
     setBusy(true);
     setError('');
-    setCopied('');
+    setMsg('');
     setResult(null);
     try {
       const cards = (await api.cards({ status: 'in_stock', game })).filter((c) => c.game === game);
       if (!cards.length) throw new Error(`No ${gameLabel(game)} cards in stock.`);
-      setProgress(`Loading pictures 0 / ${cards.length}…`);
-      const blob = await buildInventoryImage(game, cards, (d, n) => setProgress(`Loading pictures ${d} / ${n}…`));
-      setResult({ blob, url: URL.createObjectURL(blob), count: cards.length });
+      const tiles = stackCards(cards).length;
+      setProgress(`Loading pictures 0 / ${tiles}…`);
+      const blobs = await buildInventoryImages(game, cards, (d, n) => setProgress(`Loading pictures ${d} / ${n}…`));
+      setResult({ pages: blobs.map((blob) => ({ blob, url: URL.createObjectURL(blob) })), count: cards.length, tiles });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -33,17 +34,32 @@ export default function ShareInventory({ defaultGame, onClose }) {
     }
   }
 
-  const fileName = `stasis-${game.toLowerCase().replace(/\s+/g, '-')}-inventory.png`;
-  const file = result ? new File([result.blob], fileName, { type: 'image/png' }) : null;
-  const canShare = Boolean(file && navigator.canShare?.({ files: [file] }));
+  const slug = game.toLowerCase().replace(/\s+/g, '-');
+  const many = result && result.pages.length > 1;
+  const fileName = (i) => `stasis-${slug}-inventory${many ? `-${i + 1}` : ''}.png`;
+  const files = result ? result.pages.map((p, i) => new File([p.blob], fileName(i), { type: 'image/png' })) : [];
+  const canShareAll = files.length > 0 && Boolean(navigator.canShare?.({ files }));
   const canCopy = Boolean(result && navigator.clipboard?.write && window.ClipboardItem);
 
-  async function copy() {
+  function downloadAll() {
+    result.pages.forEach((p, i) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = p.url;
+        a.download = fileName(i);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, i * 300);
+    });
+  }
+
+  async function copy(i) {
     try {
-      await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': result.blob })]);
-      setCopied('Copied. Paste it into a message.');
+      await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': result.pages[i].blob })]);
+      setMsg(`Copied${many ? ` page ${i + 1}` : ''}. Paste it into a message.`);
     } catch {
-      setCopied('Your browser blocked copying. Use Download instead.');
+      setMsg('Your browser blocked copying. Use Download instead.');
     }
   }
 
@@ -60,18 +76,35 @@ export default function ShareInventory({ defaultGame, onClose }) {
           </select>
         </label>
         <button className="primary" onClick={build} disabled={busy}>{busy ? 'Building…' : 'Build PNG'}</button>
-        <span className="hint">{progress || 'All in-stock cards, priciest first, with market prices rounded to the dollar.'}</span>
+        <span className="hint">{progress || `All in-stock cards, priciest first, ${PER_PAGE} per image, duplicates stacked (×4). Market prices rounded to the dollar.`}</span>
       </div>
       {error && <div className="error">{error}</div>}
       {result && (
         <>
           <div className="share-actions">
-            <a href={result.url} download={fileName}><button className="primary">Download PNG</button></a>
-            {canCopy && <button onClick={copy}>Copy image</button>}
-            {canShare && <button onClick={() => navigator.share({ files: [file], title: `${gameLabel(game)} inventory` }).catch(() => {})}>Share…</button>}
-            <span className="hint">{copied || `${result.count} card${result.count === 1 ? '' : 's'}`}</span>
+            {many
+              ? <button className="primary" onClick={downloadAll}>Download all {result.pages.length}</button>
+              : <a href={result.pages[0].url} download={fileName(0)}><button className="primary">Download PNG</button></a>}
+            {canShareAll && <button onClick={() => navigator.share({ files, title: `${gameLabel(game)} inventory` }).catch(() => {})}>Share{many ? ' all' : ''}…</button>}
+            {!many && canCopy && <button onClick={() => copy(0)}>Copy image</button>}
+            <span className="hint">
+              {msg || `${result.count} card${result.count === 1 ? '' : 's'}${result.tiles !== result.count ? ` in ${result.tiles} stacks` : ''}${many ? ` · ${result.pages.length} images` : ''}`}
+            </span>
           </div>
-          <img className="share-preview" src={result.url} alt={`${gameLabel(game)} inventory`} />
+          <div className="share-pages">
+            {result.pages.map((p, i) => (
+              <figure key={p.url} className="share-page">
+                {many && (
+                  <figcaption>
+                    <b>Page {i + 1} of {result.pages.length}</b>
+                    <a href={p.url} download={fileName(i)}><button className="small">Download</button></a>
+                    {canCopy && <button className="small" onClick={() => copy(i)}>Copy</button>}
+                  </figcaption>
+                )}
+                <img className="share-preview" src={p.url} alt={`${gameLabel(game)} inventory${many ? `, page ${i + 1}` : ''}`} />
+              </figure>
+            ))}
+          </div>
         </>
       )}
     </div>
