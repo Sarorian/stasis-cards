@@ -110,6 +110,7 @@ export const api = {
   setShowTableFee: (id, body) => request('PUT', `/shows/${id}/table-fee`, body),
   addShowExpense: (id, body) => request('POST', `/shows/${id}/expenses`, body),
   deleteShowExpense: (id, eid) => request('DELETE', `/shows/${id}/expenses/${eid}`),
+  showChannels: () => request('GET', '/shows/channels'),
 
   admin: () => request('GET', '/admin'),
   setCapital: (body) => request('PUT', '/admin/capital', body),

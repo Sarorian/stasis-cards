@@ -6,6 +6,8 @@ import MonthlyChart from '../components/MonthlyChart.jsx';
 import GamePerformance from '../components/GamePerformance.jsx';
 import RevenueProfitChart from '../components/RevenueProfitChart.jsx';
 import InventoryValueChart from '../components/InventoryValueChart.jsx';
+import HallOfFame from '../components/HallOfFame.jsx';
+import AgingInventory from '../components/AgingInventory.jsx';
 import { YearOneFigures } from './Setup.jsx';
 
 // Charts and deeper numbers (the Dashboard keeps just the essentials)
@@ -96,6 +98,9 @@ export default function Insights() {
           ))}
         </div>
       </div>
+
+      {s.hallOfFame && <HallOfFame h={s.hallOfFame} />}
+      {s.aging && <AgingInventory a={s.aging} />}
 
       <div className="panel">
           <div className="panel-head"><h2>Revenue by payment method</h2><span className="hint">Trade = value of cards traded away</span></div>

@@ -50,6 +50,8 @@ export default function Shows() {
         </div>
       )}
 
+      {all.length > 0 && <ShowComparison shows={all} />}
+
       {shows && shows.length === 0 && !adding && (
         <div className="panel"><p className="hint">No shows yet. Add the ones you're signed up for, and buys and sales will default to the nearest one.</p></div>
       )}
@@ -254,5 +256,77 @@ function EditShowForm({ show, onSave, onCancel }) {
         <button type="button" onClick={onCancel}>Cancel</button>
       </div>
     </form>
+  );
+}
+
+const CHANNEL = { shows: 'Shows', ebay: 'eBay', private: 'Private sales', unset: 'Not set (older sales)' };
+
+// Which shows were worth it, and how shows stack up against eBay and private sales
+function ShowComparison({ shows }) {
+  const [channels, setChannels] = useState(null);
+  useEffect(() => { api.showChannels().then(setChannels).catch(() => setChannels([])); }, [shows]);
+
+  const ranked = shows
+    .filter((s) => s.date <= today())
+    .map((s) => ({ ...s, revenue: s.stats.liquid.revenue + s.stats.trade.revenue, ret: s.stats.expenses > 0 ? s.stats.net / s.stats.expenses : null }))
+    .sort((a, b) => b.stats.net - a.stats.net);
+  const rows = (channels || []).filter((c) => c.sales > 0 || c.tradeRevenue > 0 || c.costs > 0);
+
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <h2>Show comparison</h2>
+        <span className="hint">net = liquid + trade profit − table fee &amp; expenses</span>
+      </div>
+      {ranked.length === 0 ? <p className="hint">Rankings show up once a show's date has passed.</p> : (
+        <div className="table-scroll">
+          <table className="simple show-rank">
+            <thead>
+              <tr><th>#</th><th>Show</th><th className="num">Revenue</th><th className="num">Costs</th><th className="num">Net</th><th className="num" title="Net profit for every $1 of table fee and expenses">Per $1 spent</th></tr>
+            </thead>
+            <tbody>
+              {ranked.map((s, i) => (
+                <tr key={s._id}>
+                  <td className="faint">{i + 1}</td>
+                  <td>{s.name} <span className="faint">· {fmtDate(s.date)}</span></td>
+                  <td className="num">{money(s.revenue)}</td>
+                  <td className="num">{money(s.stats.expenses)}</td>
+                  <td className={`num ${tone(s.stats.net)}`}><b>{money(s.stats.net)}</b></td>
+                  <td className={`num ${s.ret === null ? 'faint' : tone(s.ret)}`}>{s.ret === null ? '—' : `${s.ret >= 0 ? '+' : '−'}$${Math.abs(s.ret).toFixed(2)}`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <h3 className="section-title" style={{ marginTop: 16 }}>Where you sell best</h3>
+      {!channels ? <p className="hint">Loading…</p> : rows.length === 0 ? <p className="hint">No sales with a "where" yet.</p> : (
+        <div className="table-scroll">
+          <table className="simple show-rank">
+            <thead>
+              <tr><th>Where</th><th className="num">Sales</th><th className="num">Revenue</th><th className="num">Fees</th><th className="num">Profit</th><th className="num">Margin</th><th className="num">Trades</th><th className="num">Show costs</th><th className="num">Net</th><th className="num">Avg days to sell</th></tr>
+            </thead>
+            <tbody>
+              {rows.map((c) => (
+                <tr key={c.channel} className={c.channel === 'unset' ? 'faint' : ''}>
+                  <td>{CHANNEL[c.channel]}</td>
+                  <td className="num">{c.sales}</td>
+                  <td className="num">{money(c.revenue)}</td>
+                  <td className="num">{c.fees ? money(c.fees) : '—'}</td>
+                  <td className={`num ${tone(c.profit)}`}>{money(c.profit)}</td>
+                  <td className="num">{c.marginPct === null ? '—' : `${c.marginPct}%`}</td>
+                  <td className="num">{c.tradeRevenue ? <>{money(c.tradeRevenue)} <span className="faint">({money(c.tradeProfit)})</span></> : '—'}</td>
+                  <td className="num">{c.costs ? money(c.costs) : '—'}</td>
+                  <td className={`num ${tone(c.net)}`}><b>{money(c.net)}</b></td>
+                  <td className="num">{c.avgDaysToSell ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="hint" style={{ marginTop: 6 }}>Margin = profit ÷ revenue on money sales. Trades show their value, with trade profit in brackets.</p>
+    </div>
   );
 }

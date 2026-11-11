@@ -119,6 +119,58 @@ function checkDates(date, endDate) {
   if (endDate && (!dateRe.test(endDate) || endDate < date)) throw new HttpError(400, 'The end date must be on or after the start date.');
 }
 
+// Where we sell best: shows vs eBay vs private sales (vs older sales with no "where").
+// Liquid = sold for money; trades are counted separately (their value, not cash).
+r.get('/channels', ah(async (req, res) => {
+  const [cards, binder, misc] = await Promise.all([
+    Card.find({ status: 'sold', 'sale.debt': { $in: [null, undefined] } }, 'cost boughtDate sale').lean(),
+    BinderEntry.find({ type: 'sell' }).lean(),
+    MiscEntry.find({ type: 'sell' }).lean(),
+  ]);
+  const channel = (at) => (!at ? 'unset' : at === 'ebay' || at === 'private' ? at : 'shows');
+  const rows = Object.fromEntries(['shows', 'ebay', 'private', 'unset'].map((k) => [k, {
+    channel: k, revenue: 0, fees: 0, profit: 0, sales: 0, cardDays: [], tradeRevenue: 0, tradeProfit: 0,
+  }]));
+  const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+  for (const c of cards) {
+    if (c.sale?.debt) continue;
+    const row = rows[channel(c.sale?.at)];
+    if (c.sale.trade) {
+      row.tradeRevenue += c.sale.price;
+      row.tradeProfit += c.sale.price - c.cost;
+      continue;
+    }
+    row.revenue += c.sale.price;
+    row.fees += c.sale.fees || 0;
+    row.profit += c.sale.price - (c.sale.fees || 0) - c.cost;
+    row.sales += 1;
+    if (c.boughtDate && c.sale.date) row.cardDays.push(days(c.boughtDate, c.sale.date));
+  }
+  for (const e of binder) {
+    const row = rows[channel(e.at)];
+    if (e.trade) { row.tradeRevenue += e.amount; row.tradeProfit += e.amount - (e.costBasis || 0); continue; }
+    row.revenue += e.amount; row.profit += e.amount - (e.costBasis || 0); row.sales += 1;
+  }
+  for (const e of misc) {
+    const row = rows[channel(e.at)];
+    row.revenue += e.amount; row.fees += e.fees || 0; row.profit += e.amount - (e.fees || 0) - e.costBasis; row.sales += 1;
+  }
+  // Show costs come off the shows row
+  const shows = await Show.find().lean();
+  const showCosts = round2(shows.reduce((a, sh) => a + (sh.tableFee?.amount || 0) + sum(sh.expenses || [], (x) => x.amount), 0));
+  res.json(Object.values(rows).map((r0) => {
+    const { cardDays, ...row } = r0;
+    const costs = row.channel === 'shows' ? showCosts : 0;
+    const profit = round2(row.profit);
+    return {
+      ...row, revenue: round2(row.revenue), fees: round2(row.fees), profit, tradeRevenue: round2(row.tradeRevenue), tradeProfit: round2(row.tradeProfit),
+      costs, net: round2(profit + row.tradeProfit - costs),
+      marginPct: row.revenue > 0 ? Math.round((profit / row.revenue) * 1000) / 10 : null,
+      avgDaysToSell: cardDays.length ? Math.round(cardDays.reduce((a, b) => a + b, 0) / cardDays.length) : null,
+    };
+  }));
+}));
+
 // List shows, newest first, each with its numbers
 r.get('/', ah(async (req, res) => {
   const shows = await Show.find().sort({ date: -1 }).lean();

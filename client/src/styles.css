@@ -408,3 +408,26 @@ button.attention { border-color: var(--warn); color: var(--warn); }
   .show-costs td:nth-child(3) { width: 78px; }
   .show-costs td:nth-child(4) { width: 72px; }
 }
+
+/* Hall of fame */
+.hof-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.hof { background: var(--surface-2); border-radius: var(--radius); padding: 10px 12px; min-width: 0; }
+.hof-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.hof-value { font-size: 22px; font-weight: 700; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.hof-title { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hof .faint { font-size: 12px; }
+
+/* Aging inventory: one hue, lighter = fresher, darker = older */
+.aging-bar { display: flex; gap: 2px; height: 14px; border-radius: 4px; overflow: hidden; margin: 4px 0 10px; }
+.aging-seg { flex-basis: 0; min-width: 6px; }
+.aging-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 16px; font-size: 13px; }
+.aging-key { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.aging-key b { font-variant-numeric: tabular-nums; }
+.aging-key .faint { font-size: 12px; flex-basis: 100%; padding-left: 16px; }
+.aging-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+.s0 { background: var(--age-0); } .s1 { background: var(--age-1); } .s2 { background: var(--age-2); } .s3 { background: var(--age-3); }
+:root { --age-0: #c6dbf5; --age-1: #86b2ea; --age-2: #3f7fd0; --age-3: #1d4f94; }
+@media (prefers-color-scheme: dark) { :root { --age-0: #2a4468; --age-1: #3d6aa8; --age-2: #5f93d9; --age-3: #a9c8f2; } }
+.show-rank td, .show-rank th { white-space: nowrap; }
+.show-rank td:first-child { white-space: normal; }
+.table-scroll { overflow-x: auto; }

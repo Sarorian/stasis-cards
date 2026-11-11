@@ -5,6 +5,7 @@ import Settings from '../models/Settings.js';
 import MiscItem from '../models/MiscItem.js';
 import DebtEntry from '../models/DebtEntry.js';
 import Show from '../models/Show.js';
+import { showStats } from './shows.js';
 import { balances as debtBalances } from './debt.js';
 import MiscEntry from '../models/MiscEntry.js';
 import { summarize as summarizeMisc } from './misc.js';
@@ -110,6 +111,49 @@ r.get('/', ah(async (req, res) => {
   );
 
   const holdDays = sold.map((c) => daysBetween(c.boughtDate, c.sale.date));
+
+  const sumIt = (list, f) => round2(list.reduce((acc, x) => acc + f(x), 0));
+  // ---- Aging inventory: how long cards have been sitting ----
+  const now = today();
+  const aged = inStock.map((c) => ({
+    id: c._id, name: c.name, number: c.number, game: c.game, graded: c.graded, condition: c.condition,
+    days: Math.max(0, daysBetween(c.boughtDate || now, now)), cost: c.cost || 0, market: c.market?.price || 0, change30d: c.market?.change30d ?? null,
+  }));
+  const bucket = (label, lo, hi) => {
+    const list = aged.filter((a) => a.days >= lo && a.days <= hi);
+    return { label, min: lo, count: list.length, cost: sumIt(list, (a) => a.cost), market: sumIt(list, (a) => a.market) };
+  };
+  const aging = {
+    buckets: [bucket('Under 30 days', 0, 29), bucket('30–59 days', 30, 59), bucket('60–89 days', 60, 89), bucket('90+ days', 90, Infinity)],
+    oldest: [...aged].filter((a) => a.days >= 60).sort((a, b) => b.days - a.days || b.cost - a.cost).slice(0, 12),
+    avgDays: aged.length ? Math.round(aged.reduce((a, x) => a + x.days, 0) / aged.length) : null,
+  };
+
+  // ---- Hall of fame ----
+  const cardFlips = sold.map((c) => ({
+    id: c._id, name: c.name, game: c.game, cost: c.cost || 0, revenue: c.sale.price, date: c.sale.date,
+    profit: round2(c.sale.price - (c.sale.fees || 0) - (c.cost || 0)), days: daysBetween(c.boughtDate, c.sale.date),
+    trade: Boolean(c.sale.trade), debt: Boolean(c.sale.debt),
+  })).filter((f) => !f.debt);
+  const top = (list, f) => (list.length ? list.reduce((a, b) => (f(b) > f(a) ? b : a)) : null);
+  const profitable = cardFlips.filter((f) => f.profit > 0);
+  const byDay = new Map();
+  for (const x of sales) if (x.date) byDay.set(x.date, round2((byDay.get(x.date) || 0) + x.profit));
+  const bestDay = top([...byDay.entries()].map(([date, profit]) => ({ date, profit, count: sales.filter((x) => x.date === date).length })), (d) => d.profit);
+  const showNets = (await showStats(shows));
+  const bestShow = top(shows.map((sh) => ({ id: sh._id, name: sh.name, date: sh.date, net: showNets.get(String(sh._id)).net }))
+    .filter((x) => showNets.get(String(x.id)).liquid.revenue + showNets.get(String(x.id)).trade.revenue > 0), (x) => x.net);
+  const hallOfFame = {
+    bestFlip: top(profitable, (f) => f.profit),
+    bestReturn: top(profitable.filter((f) => f.cost >= 5), (f) => f.profit / f.cost),
+    biggestSale: top(cardFlips, (f) => f.revenue),
+    fastestFlip: top(profitable, (f) => -f.days * 1e6 + f.profit),
+    slowestSale: top(cardFlips, (f) => f.days),
+    longestHeld: top(aged, (a) => a.days),
+    bestDay: bestDay && bestDay.profit > 0 ? bestDay : null,
+    bestShow: bestShow && bestShow.net > 0 ? bestShow : null,
+    totals: { cardsSold: sold.length, lifetimeRevenue: sumIt(sales, (x) => x.revenue), lifetimeProfit: sumIt(sales, (x) => x.profit) },
+  };
   const cardSales = sales.filter((s) => s.kind === 'card');
   const flipsByProfit = [...cardSales].sort((a, b) => b.profit - a.profit);
 
@@ -342,6 +386,8 @@ r.get('/', ah(async (req, res) => {
     games,
     binderStats,
     miscStats,
+    aging,
+    hallOfFame,
     byMethod,
     recentSales: [...sales].map((s) => (s.payments ? { ...s, method: paymentLabel(s.payments) } : s)).sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 8),
     pricesUpdatedAt: settings.pricesUpdatedAt,
